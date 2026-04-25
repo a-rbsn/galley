@@ -2,11 +2,9 @@
 
 Galley is a personal, non-commercial web client for reading Reddit.
 
-It is a [SvelteKit](https://kit.svelte.dev) application that signs each
-user in through Reddit's OAuth 2.0 authorisation code flow and renders
-that user's own Reddit account — front page, subscribed subreddits,
-threads, profile, saved history — through a custom interface focused on
-legibility and information density.
+It is a [SvelteKit](https://kit.svelte.dev) application that renders
+Reddit through a custom typographic interface — feeds, subreddits,
+threads — using Reddit's public JSON endpoints.
 
 The visual direction is contemporary editorial. Newspaper-influenced
 typography, hairline rules in place of cards, a serif for headlines and
@@ -18,68 +16,94 @@ Early. The interface design is settled and lives as static mocks under
 `mock/`. The SvelteKit application is being built out from those mocks.
 Expect rough edges and missing views.
 
-## How it works
+## Architecture
 
-Galley is a thin client.
+Galley reads Reddit through its public JSON endpoints rather than the
+authenticated Data API. Every Reddit URL works as a JSON endpoint by
+appending `.json` — for example, `https://www.reddit.com/r/typography.json`
+returns the same listing data the website renders from. There is no
+OAuth flow, no client ID, no API approval process, no per-user account.
 
-A user signs in with their own Reddit account. The application receives
-an OAuth access token scoped to that user, and every request to the
-Reddit API is made on that user's behalf in direct response to
-something they did in the interface — opening a thread, scrolling a
-feed, voting, saving a post.
+Galley fetches those endpoints server-side from its SvelteKit
+`+page.server.ts` load functions, applies a short in-memory cache so
+that repeated views of the same page do not produce repeated upstream
+requests, and renders the result through Galley's own components and
+styles. Nothing is mirrored to a database. Nothing is republished.
 
-Nothing is fetched in the background. Nothing is scraped. No Reddit
-content is retained on the server beyond the lifetime of a session.
-There is no shared cache of Reddit data across users.
+This is a deliberate constraint, not a stopgap. The goal is a small,
+legible, read-only client. What the public endpoints expose is enough
+to read Reddit; the rest of the API surface is not needed.
 
-## Scope and intent
+## What Galley does not do
 
-Galley is non-commercial and free to use. It operates within Reddit's
-free API tier and is intended to remain inside it. In particular:
+Galley is read-only by design. It does not:
 
-- No advertising, paid tiers, or monetisation of any kind.
-- No data aggregation, resale, or analytics built on Reddit content.
-- No use of Reddit content to train machine-learning models.
-- No automation, scraping, or scheduled fetching. Every request to the
-  Reddit API originates from an authenticated user action in the UI.
-- One user, one session, one access token. Galley does not act on
-  behalf of users who are not currently present.
+- authenticate users (there is no sign-in)
+- vote, comment, save, submit, post, or send messages
+- scrape HTML pages — only the documented `.json` endpoints
+- aggregate, store, mirror, or republish Reddit content
+- use Reddit content to train machine-learning models
+- run any automated, background, or scheduled requests
+- carry advertising, analytics, or tracking of any kind
 
-The project exists so that its author can read Reddit in a layout he
-prefers. Others are welcome to run their own copy.
+Every request to Reddit originates from a person looking at a page in
+their browser.
 
-## Stack
+## Subreddit list
 
-- SvelteKit (TypeScript)
-- Reddit OAuth 2.0, authorisation code flow
-- Reddit's public JSON API
+There is no logged-in account, so Galley does not pull a *subscribed*
+list from Reddit. Instead, each instance of Galley keeps its own list
+of subreddits the reader has chosen to follow, configured through the
+settings page and stored in the browser's local storage.
 
-## Running locally
+This is the substance of Galley as a reader: a small, curated set of
+subreddits, edited by hand, displayed as one merged feed and as
+individual subreddit pages. There is no recommendation system, no
+algorithmic ranking beyond Reddit's own (*hot*, *new*, *top*), and no
+inferred interest. The reader decides what they read.
 
-A Reddit application is required. Register one at
-<https://www.reddit.com/prefs/apps> as a *web app*, and note its client
-ID, client secret, and redirect URI.
+## Why not Devvit
 
-Configuration is read from environment variables. A template will be
-provided as `.env.example` once the application scaffold lands; for
-now, the relevant values are:
+Devvit is Reddit's first-party platform for building apps that run
+inside reddit.com. It is the right tool for extending Reddit's own
+product — moderation utilities, subreddit-scoped widgets, embedded
+experiences. It is not the right tool for Galley.
+
+Galley is, by intention, an independent reading interface. Its visual
+direction is editorial typography; its layout is asymmetric and
+rule-driven; its constraints (read-only, no aggregation, no mirroring)
+are easier to demonstrate when the application is hosted at a separate
+origin from Reddit and runs on a stack the project controls end-to-end.
+The public JSON endpoints provide everything Galley needs to read
+Reddit; running on Devvit would constrain that without expanding what
+the project does.
+
+## Local development
+
+Requirements:
+
+- Node.js 20 or newer
+- [pnpm](https://pnpm.io)
+
+Reddit asks that all clients send a descriptive `User-Agent` header
+that identifies the application and its maintainer. Set it before
+running the app:
 
 ```
-REDDIT_CLIENT_ID=
-REDDIT_CLIENT_SECRET=
-REDDIT_REDIRECT_URI=http://localhost:5173/auth/callback
-REDDIT_USER_AGENT=galley/0.1 (by /u/your-username)
+# .env
+REDDIT_USER_AGENT=web:io.galley.app:v0.1.0 (by /u/your-username)
 ```
 
-The `User-Agent` follows Reddit's recommended format and identifies the
-client and its maintainer on every request.
-
-Standard SvelteKit commands apply once the project is initialised:
+Then:
 
 ```
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
+
+The app runs at <http://localhost:5173>. On first visit, the home page
+is empty until you add a few subreddits from the settings page — see
+*Subreddit list* above.
 
 ## Licence
 

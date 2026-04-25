@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Galley — Feed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..900;1,8..60,300..900&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Reddit-adjacent: warm paper, deep ink, muted terracotta-orange accent */
+    --paper:        oklch(98% 0.008 70);
+    --paper-2:      oklch(95.5% 0.012 70);
+    --ink:          oklch(20% 0.012 50);
+    --ink-2:        oklch(36% 0.014 50);
+    --ink-3:        oklch(54% 0.014 50);
+    --ink-4:        oklch(70% 0.012 60);
+    --rule:         oklch(86% 0.010 60);
+    --rule-strong:  oklch(72% 0.014 60);
+    --accent:       oklch(54% 0.16 38);
+    --accent-deep:  oklch(40% 0.13 38);
+    --accent-soft:  oklch(54% 0.16 38 / 0.10);
+    --serif:  "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+    --sans:   "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --mono:   "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.45;
+    font-feature-settings: "kern", "liga", "onum";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection { background: var(--accent-soft); color: var(--ink); }
+
+  /* ───────── Masthead ───────── */
+  .masthead {
+    border-bottom: 1px solid var(--ink);
+    background: var(--paper);
+    position: sticky; top: 0; z-index: 30;
+  }
+  .masthead-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 14px 36px 12px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: end;
+    gap: 24px;
+  }
+  .dateline {
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .dateline em {
+    font-style: italic;
+    font-family: var(--serif);
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink-2);
+  }
+  .nameplate {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 30px;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-variation-settings: "opsz" 60;
+    text-align: center;
+    padding-bottom: 2px;
+  }
+  .nameplate .amp {
+    font-style: italic;
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .nameplate-sub {
+    display: block;
+    font-family: var(--sans);
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+  .top-actions {
+    display: flex; justify-content: flex-end; align-items: center; gap: 22px;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .search {
+    border: none;
+    border-bottom: 1px solid var(--rule-strong);
+    background: transparent;
+    font-family: var(--sans);
+    font-size: 12px;
+    padding: 4px 2px 4px 16px;
+    width: 180px;
+    color: var(--ink);
+    background-image: linear-gradient(transparent, transparent);
+    outline: none;
+  }
+  .search::placeholder { color: var(--ink-4); font-style: italic; font-family: var(--serif); }
+  .search-wrap { position: relative; display: flex; align-items: center; }
+  .search-wrap::before {
+    content: "";
+    position: absolute; left: 0; top: 50%;
+    width: 10px; height: 10px;
+    border: 1px solid var(--ink-3);
+    border-radius: 50%;
+    transform: translateY(-60%);
+  }
+  .search-wrap::after {
+    content: "";
+    position: absolute; left: 8px; top: 50%;
+    width: 5px; height: 1px;
+    background: var(--ink-3);
+    transform: translateY(2px) rotate(45deg);
+    transform-origin: left center;
+  }
+  .top-link { color: var(--ink-2); text-decoration: none; cursor: pointer; }
+  .top-link:hover { color: var(--accent); }
+  .top-link.signin {
+    border: 1px solid var(--ink);
+    padding: 5px 12px;
+    color: var(--ink);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  /* ───────── Section bar (kicker rail) ───────── */
+  .sectionbar {
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper);
+    position: sticky; top: 59px; z-index: 25;
+  }
+  .sectionbar-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 8px 36px 8px;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .sectionbar-inner::-webkit-scrollbar { display: none; }
+  .sectionbar a { color: inherit; text-decoration: none; white-space: nowrap; padding: 4px 0; cursor: pointer; }
+  .sectionbar a:hover { color: var(--ink); }
+  .sectionbar a.active {
+    color: var(--ink);
+    box-shadow: 0 1px 0 var(--ink);
+  }
+  .sectionbar .sep { color: var(--ink-4); font-size: 9px; }
+
+  /* ───────── Main grid ───────── */
+  .page {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 36px 120px;
+    display: grid;
+    grid-template-columns: 168px minmax(0, 720px) 1fr;
+    gap: 56px;
+  }
+
+  /* ───────── Left rail ───────── */
+  .rail {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--ink-2);
+    position: sticky;
+    top: 124px;
+    align-self: start;
+    max-height: calc(100vh - 140px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .rail h4 {
+    margin: 0 0 8px;
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 9.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 6px;
+  }
+  .rail-group + .rail-group { margin-top: 22px; }
+  .rail ul { list-style: none; margin: 0; padding: 0; }
+  .rail li {
+    padding: 5px 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .rail li:hover .rail-name { color: var(--accent); }
+  .rail-name {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink);
+    transition: color .15s;
+  }
+  .rail-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-4);
+    font-variant-numeric: tabular-nums;
+  }
+  .rail li.active .rail-name { font-style: normal; font-weight: 600; }
+  .rail li.active::before {
+    content: "▸";
+    margin-right: 4px;
+    color: var(--accent);
+    font-size: 10px;
+    align-self: center;
+  }
+
+  /* ───────── Feed column ───────── */
+  .feed {
+    border-top: 3px double var(--ink);
+    padding-top: 20px;
+  }
+
+  .feed-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 18px;
+  }
+  .feed-title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 22px;
+    font-variation-settings: "opsz" 36;
+    letter-spacing: -0.005em;
+    margin: 0;
+  }
+  .feed-title em { color: var(--ink-3); font-weight: 300; }
+  .feed-sort {
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex; gap: 14px;
+  }
+  .feed-sort a { color: inherit; text-decoration: none; cursor: pointer; }
+  .feed-sort a.active { color: var(--ink); border-bottom: 1px solid var(--ink); padding-bottom: 2px; }
+  .feed-sort a:hover { color: var(--ink); }
+
+  /* ───────── Post (entry) ───────── */
+  .entry {
+    display: grid;
+    grid-template-columns: 1fr 88px;
+    gap: 22px;
+    padding: 14px 0 14px 14px;
+    border-bottom: 1px solid var(--rule);
+    align-items: stretch;
+    position: relative;
+  }
+  .entry.no-thumb { grid-template-columns: 1fr; }
+  .entry:hover .e-title a { color: var(--accent); }
+  /* Voted rows get an accent rail on the left, mirroring mobile */
+  .entry.voted::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--accent);
+  }
+  .entry.downvoted::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--ink-3);
+  }
+  .entry.downvoted .e-title a { color: var(--ink-3); }
+
+  /* Vote column — inline mini-arrows in the byline now, full column removed */
+
+  /* Body column */
+  .e-kicker {
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 4px;
+    display: flex; align-items: baseline; gap: 10px;
+    flex-wrap: nowrap;
+    line-height: 1.3;
+  }
+  .e-kicker .sub { color: var(--accent); cursor: pointer; }
+  .e-kicker .sub:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .e-kicker .domain {
+    color: var(--ink-3);
+    text-transform: none;
+    letter-spacing: 0.02em;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .e-kicker .domain::before { content: "↗ "; color: var(--ink-4); }
+
+  .e-title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 1.18;
+    letter-spacing: -0.012em;
+    font-variation-settings: "opsz" 32;
+    margin: 0;
+    text-wrap: pretty;
+    max-width: 60ch;
+  }
+  .e-title a {
+    color: var(--ink);
+    text-decoration: none;
+    transition: color .15s;
+  }
+
+  /* Excerpts (.e-dek, .e-body, .e-link) removed — mobile-style strip layout */
+
+  .e-byline {
+    margin-top: 6px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--ink-3);
+    display: flex; gap: 0; align-items: baseline;
+    flex-wrap: wrap;
+    line-height: 1.4;
+    font-feature-settings: "kern", "liga", "onum";
+    font-variant-numeric: oldstyle-nums;
+  }
+  .e-byline .author { color: var(--ink-2); font-style: normal; font-weight: 500; cursor: pointer; }
+  .e-byline .author:hover { color: var(--accent); }
+  .e-byline .sep { margin: 0 8px; color: var(--ink-4); font-style: normal; }
+  .e-byline .pts { font-style: italic; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  .e-byline .pts .num { color: var(--ink-2); font-style: normal; }
+  .e-byline .pts.up .num { color: var(--accent); }
+  .e-byline .comments { font-style: italic; color: var(--ink-3); cursor: pointer; }
+  .e-byline .comments:hover { color: var(--accent); }
+  .e-byline .comments .num { color: var(--ink-2); font-style: normal; font-variant-numeric: tabular-nums; }
+  .e-byline .time { font-style: italic; color: var(--ink-4); }
+  .e-byline .actions {
+    margin-left: auto;
+    display: flex; gap: 14px;
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    opacity: 0;
+    transition: opacity .15s;
+  }
+  .entry:hover .e-byline .actions { opacity: 1; }
+  .e-byline .actions span { cursor: pointer; }
+  .e-byline .actions span:hover { color: var(--ink); }
+  /* Vote arrows live inline in the byline now */
+  .e-byline .vote {
+    display: inline-flex; gap: 4px;
+    margin-right: 10px;
+    font-style: normal;
+    user-select: none;
+  }
+  .e-byline .vote span {
+    cursor: pointer;
+    color: var(--ink-4);
+    font-size: 11px;
+    line-height: 1;
+    padding: 2px 1px;
+    transition: color .12s;
+  }
+  .e-byline .vote span:hover { color: var(--ink); }
+  .e-byline .vote .voted-up { color: var(--accent); }
+  .e-byline .vote .voted-down { color: var(--ink); }
+
+  /* Right column — thumbnail when present (image/video/gallery) */
+  .e-thumb {
+    align-self: stretch;
+    width: 88px;
+    aspect-ratio: 1 / 1;
+    background: var(--paper-2);
+    position: relative;
+    overflow: hidden;
+  }
+  .e-thumb .badge {
+    position: absolute;
+    bottom: 0; left: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--sans);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    padding: 2px 5px;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+  .e-thumb .badge.video { background: var(--accent); }
+  .e-thumb .play {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--paper);
+    font-size: 18px;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+  }
+  .e-thumb .duration {
+    position: absolute;
+    bottom: 3px; right: 3px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 4px;
+    line-height: 1.2;
+  }
+
+  /* Lead post — no longer larger; same strip as the rest */
+
+  /* Section break (rule with label) */
+  .break {
+    display: flex; align-items: center; gap: 14px;
+    margin: 26px 0 6px;
+    color: var(--ink-3);
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .break::before, .break::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--rule);
+  }
+  .break .ornament {
+    font-family: var(--serif);
+    font-style: italic;
+    color: var(--ink-4);
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 12px;
+  }
+
+  /* Image post block (deprecated — image posts now use right-side .e-thumb) */
+
+  /* Pinned/announcement variation */
+  .entry.pinned .e-kicker { color: var(--accent); }
+  .entry.pinned .e-title { font-style: italic; }
+
+  /* Footer */
+  .colophon {
+    margin: 60px auto 0;
+    max-width: 720px;
+    padding: 20px 36px 40px;
+    border-top: 1px solid var(--ink);
+    font-family: var(--sans);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .colophon em { font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--ink-2); letter-spacing: 0; }
+
+  @media (max-width: 1040px) {
+    .page { grid-template-columns: minmax(0, 720px) 1fr; gap: 40px; }
+    .rail { display: none; }
+  }
+  @media (max-width: 760px) {
+    .page { grid-template-columns: minmax(0, 1fr); padding: 20px 22px 80px; }
+    .entry { gap: 14px; }
+    .masthead-inner { grid-template-columns: auto auto; }
+    .top-actions, .dateline { display: none; }
+    .nameplate { text-align: left; font-size: 22px; }
+    .entry.lead .e-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ───────── MASTHEAD ───────── -->
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="dateline">
+      Saturday · April 25, 2026
+    </div>
+    <div class="nameplate">
+      Galley<span class="amp">.</span>
+    </div>
+    <div class="top-actions">
+      <div class="search-wrap">
+        <input class="search" type="text" placeholder="Search the feed…" />
+      </div>
+      <a class="top-link" href="#">Submit</a>
+      <a class="top-link signin" href="#">Sign in</a>
+    </div>
+  </div>
+</header>
+
+<!-- ───────── SECTION BAR ───────── -->
+<nav class="sectionbar">
+  <div class="sectionbar-inner">
+    <a href="#" class="active">Front Page</a>
+    <span class="sep">●</span>
+    <a href="#">Popular</a>
+    <a href="#">All</a>
+    <a href="#">Subscribed</a>
+    <span class="sep">●</span>
+    <a href="#">News</a>
+    <a href="#">Letters</a>
+    <a href="#">Tech</a>
+    <a href="#">Books</a>
+    <a href="#">Film &amp; Television</a>
+    <a href="#">Cities</a>
+    <a href="#">Science</a>
+    <a href="#">The Kitchen</a>
+    <a href="#">Sport</a>
+    <a href="#">Hobbies</a>
+  </div>
+</nav>
+
+<main class="page">
+
+  <!-- ───────── LEFT RAIL ───────── -->
+  <aside class="rail">
+    <div class="rail-group">
+      <h4>Reading</h4>
+      <ul>
+        <li><span class="rail-name">Saved</span><span class="rail-num">42</span></li>
+        <li><span class="rail-name">History</span><span class="rail-num">—</span></li>
+        <li><span class="rail-name">Replies</span><span class="rail-num">3</span></li>
+      </ul>
+    </div>
+
+    <div class="rail-group">
+      <h4>Subscribed</h4>
+      <ul>
+        <li><span class="rail-name">AskHistorians</span><span class="rail-num">2.1m</span></li>
+        <li><span class="rail-name">TrueFilm</span><span class="rail-num">684k</span></li>
+        <li><span class="rail-name">slatestarcodex</span><span class="rail-num">71k</span></li>
+        <li><span class="rail-name">malefashionadvice</span><span class="rail-num">5.3m</span></li>
+        <li><span class="rail-name">books</span><span class="rail-num">23m</span></li>
+        <li><span class="rail-name">urbanism</span><span class="rail-num">142k</span></li>
+        <li><span class="rail-name">cycling</span><span class="rail-num">811k</span></li>
+        <li><span class="rail-name">cscareerquestions</span><span class="rail-num">1.4m</span></li>
+        <li><span class="rail-name">DepthHub</span><span class="rail-num">390k</span></li>
+        <li><span class="rail-name">menwritingwomen</span><span class="rail-num">220k</span></li>
+        <li><span class="rail-name">chess</span><span class="rail-num">512k</span></li>
+        <li><span class="rail-name">ArtisanVideos</span><span class="rail-num">1.1m</span></li>
+      </ul>
+    </div>
+
+  </aside>
+
+  <!-- ───────── FEED ───────── -->
+  <section class="feed">
+
+    <div class="feed-header">
+      <h2 class="feed-title"><em>16 entries</em></h2>
+      <nav class="feed-sort">
+        <a href="#" class="active">Hot</a>
+        <a href="#">New</a>
+        <a href="#">Top</a>
+        <a href="#">Rising</a>
+      </nav>
+    </div>
+
+    <!-- 1. slatestarcodex / text (lead) -->
+    <article class="entry lead voted no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/slatestarcodex</span>
+        </div>
+        <h2 class="e-title"><a href="#">On the quiet death of the lurker, and what we lost when every reader became a poster</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="voted-up" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/scott_a</span>
+          <span class="sep">·</span>
+          <span class="pts up"><span class="num">14.2k</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">1,847</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">7 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 2. urbanism / link -->
+    <article class="entry voted no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/urbanism</span>
+          <span class="domain">bloomberg.com</span>
+        </div>
+        <h2 class="e-title"><a href="#">Lisbon's experiment with car-free arteries is two years old. The data is unambiguous, the politics are not.</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="voted-up" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/transit_planner_pt</span>
+          <span class="sep">·</span>
+          <span class="pts up"><span class="num">8,914</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">962</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">11 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 3. AskHistorians / text -->
+    <article class="entry no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/AskHistorians</span>
+        </div>
+        <h2 class="e-title"><a href="#">When did ordinary people in medieval Europe first start owning books, as opposed to merely encountering them?</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/codex_curious</span>
+          <span class="sep">·</span>
+          <span class="pts"><span class="num">3,402</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">214</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">3 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 4. MachineLearning / link -->
+    <article class="entry voted no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/MachineLearning</span>
+          <span class="domain">arxiv.org</span>
+        </div>
+        <h2 class="e-title"><a href="#">A 2.1 B-parameter model trained only on textbooks matches GPT-3.5 on MMLU. The authors argue curriculum, not scale.</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="voted-up" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/grad_descent</span>
+          <span class="sep">·</span>
+          <span class="pts up"><span class="num">6,238</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">487</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">9 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 5. ArchitecturePorn / image -->
+    <article class="entry voted">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/ArchitecturePorn</span>
+        </div>
+        <h2 class="e-title"><a href="#">The reading room at the Stockholm Public Library, photographed at the moment the lights came on</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="voted-up" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/ehrling_lens</span>
+          <span class="sep">·</span>
+          <span class="pts up"><span class="num">11.7k</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">328</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">14 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+      <div class="e-thumb" style="background: linear-gradient(135deg, oklch(74% 0.07 50) 0%, oklch(48% 0.10 50) 70%, oklch(32% 0.08 70) 100%);"><span class="badge">Photo</span></div>
+    </article>
+
+    <div class="break"><span class="ornament">§</span></div>
+
+    <!-- 6. books / text -->
+    <article class="entry no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/books</span>
+        </div>
+        <h2 class="e-title"><a href="#">Re-reading <em>Middlemarch</em> at thirty-eight is a different novel than the one I gave up on at twenty</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/eliotinmiddleage</span>
+          <span class="sep">·</span>
+          <span class="pts"><span class="num">4,156</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">691</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">5 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 7. ArtisanVideos / video -->
+    <article class="entry voted">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/ArtisanVideos</span>
+        </div>
+        <h2 class="e-title"><a href="#">A Kyoto bookbinder repairs a 17th-century almanac in real time, narrated by his apprentice</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="voted-up" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/slow_hands</span>
+          <span class="sep">·</span>
+          <span class="pts up"><span class="num">9,341</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">203</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">4 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+      <div class="e-thumb" style="background: linear-gradient(135deg, oklch(74% 0.07 15) 0%, oklch(48% 0.10 15) 70%, oklch(32% 0.08 35) 100%);"><span class="play">▶</span><span class="duration">12:08</span><span class="badge video">Video</span></div>
+    </article>
+
+    <!-- 8. news / link -->
+    <article class="entry voted no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/news</span>
+          <span class="domain">reuters.com</span>
+        </div>
+        <h2 class="e-title"><a href="#">Japan's population fell by 781,000 last year, the steepest decline on record; rural prefectures account for almost all of it.</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="voted-up" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/wire_reader</span>
+          <span class="sep">·</span>
+          <span class="pts up"><span class="num">22.4k</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">3,204</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">2 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 9. fountainpens / image -->
+    <article class="entry">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/fountainpens</span>
+        </div>
+        <h2 class="e-title"><a href="#">After eleven years of daily use, the nib on my Pelikan M400 has finally written itself into a shape that's mine</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/inkwell_thoughts</span>
+          <span class="sep">·</span>
+          <span class="pts"><span class="num">847</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">73</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">6 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+      <div class="e-thumb" style="background: linear-gradient(135deg, oklch(74% 0.07 280) 0%, oklch(48% 0.10 280) 70%, oklch(32% 0.08 300) 100%);"><span class="badge">Photo</span></div>
+    </article>
+
+    <!-- 10. AskHistorians / pinned -->
+    <article class="entry pinned no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/AskHistorians</span>
+        </div>
+        <h2 class="e-title"><a href="#">A reminder, gently — top-level answers must cite primary or peer-reviewed sources</a></h2>
+        <div class="e-byline">
+          <span class="author">u/mod_team</span>
+          <span class="sep">—</span>
+          <span>pinned, 2 d ago</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">42</span> replies</span>
+          <span class="actions"><span>Save</span><span>Share</span></span>
+        </div>
+      </div>
+    </article>
+
+    <div class="break"><span class="ornament">§</span></div>
+
+    <!-- 11. TrueFilm / text -->
+    <article class="entry voted no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/TrueFilm</span>
+        </div>
+        <h2 class="e-title"><a href="#">Hou Hsiao-hsien doesn't cut away from people thinking, and that single decision is most of his style</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="voted-up" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/static_camera</span>
+          <span class="sep">·</span>
+          <span class="pts up"><span class="num">5,612</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">418</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">12 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 12. malefashionadvice / gallery -->
+    <article class="entry">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/malefashionadvice</span>
+        </div>
+        <h2 class="e-title"><a href="#">Twelve months of building a wardrobe around three colors and one fabric weight — the in-progress shots</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/navy_oxford</span>
+          <span class="sep">·</span>
+          <span class="pts"><span class="num">3,278</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">189</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">10 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+      <div class="e-thumb" style="background: linear-gradient(135deg, oklch(74% 0.07 200) 0%, oklch(48% 0.10 200) 70%, oklch(32% 0.08 220) 100%);"><span class="badge">×12</span></div>
+    </article>
+
+    <!-- 13. cscareerquestions / text -->
+    <article class="entry no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/cscareerquestions</span>
+        </div>
+        <h2 class="e-title"><a href="#">Six years in, three companies deep, and I've started to suspect the senior title is mostly a permission slip to say no</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/quietly_senior</span>
+          <span class="sep">·</span>
+          <span class="pts"><span class="num">1,287</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">256</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">8 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 14. AskCulinary / image -->
+    <article class="entry">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/AskCulinary</span>
+        </div>
+        <h2 class="e-title"><a href="#">A working theory of why my mother's roast chicken is better than mine, after twelve attempts to copy it</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/sundayroast</span>
+          <span class="sep">·</span>
+          <span class="pts"><span class="num">2,041</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">312</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">19 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+      <div class="e-thumb" style="background: linear-gradient(135deg, oklch(74% 0.07 35) 0%, oklch(48% 0.10 35) 70%, oklch(32% 0.08 55) 100%);"><span class="badge">Photo</span></div>
+    </article>
+
+    <!-- 15. chess / text -->
+    <article class="entry no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/chess</span>
+        </div>
+        <h2 class="e-title"><a href="#">Annotated: a 38-move endgame from last night's club blitz where I'm fairly sure the engine is wrong about move 24</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/kingside_kettle</span>
+          <span class="sep">·</span>
+          <span class="pts"><span class="num">612</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">94</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">1 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <!-- 16. DepthHub / link -->
+    <article class="entry voted no-thumb">
+      <div class="e-body-col">
+        <div class="e-kicker">
+          <span class="sub">r/DepthHub</span>
+        </div>
+        <h2 class="e-title"><a href="#">An unusually patient explanation of why container ports cannot simply hire more longshoremen</a></h2>
+        <div class="e-byline">
+          <span class="vote"><span class="voted-up" data-dir="up">▲</span><span data-dir="down">▼</span></span>
+          <span class="author">u/logistics_curious</span>
+          <span class="sep">·</span>
+          <span class="pts up"><span class="num">3,891</span> pts</span>
+          <span class="sep">·</span>
+          <span class="comments"><span class="num">201</span> comments</span>
+          <span class="sep">·</span>
+          <span class="time">16 hr ago</span>
+          <span class="actions"><span>Save</span><span>Share</span><span>Hide</span></span>
+        </div>
+      </div>
+    </article>
+
+    <div class="break"><span class="ornament">— end of front page —</span></div>
+
+  </section>
+
+  <!-- empty 3rd col reserved for breathing room (asymmetric like a newspaper margin) -->
+  <div></div>
+
+</main>
+
+<footer class="colophon">
+  <div><em>Galley</em></div>
+  <div>© 2026 · About · Help · Terms · Privacy</div>
+</footer>
+
+<script>
+// Make votes/comments lightly interactive — hover/active state already in CSS.
+// Small touch: clicking a sort link toggles 'active'.
+document.querySelectorAll('.feed-sort a').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.feed-sort a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+  });
+});
+document.querySelectorAll('.sectionbar a').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.sectionbar a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+  });
+});
+
+// Upvote toggle — inline arrows in the byline
+document.querySelectorAll('.e-byline .vote').forEach(group => {
+  const up = group.querySelector('[data-dir="up"]');
+  const down = group.querySelector('[data-dir="down"]');
+  const entry = group.closest('.entry');
+  const ptsEl = entry.querySelector('.e-byline .pts');
+  const ptsNumEl = ptsEl?.querySelector('.num');
+  let state = up.classList.contains('voted-up') ? 1 : (down.classList.contains('voted-down') ? -1 : 0);
+  const baseText = ptsNumEl?.textContent || '';
+  const parseN = (s) => {
+    if (s.endsWith('k')) return Math.round(parseFloat(s) * 1000);
+    if (s === '—') return 0;
+    return parseInt(s.replace(/,/g, ''), 10) || 0;
+  };
+  const fmt = (n) => n >= 10000 ? (n/1000).toFixed(1) + 'k' : n.toLocaleString('en-US');
+  const base = parseN(baseText) - (state === 1 ? 1 : 0);
+  const updateNum = () => {
+    if (!ptsNumEl || !base) return;
+    ptsNumEl.textContent = fmt(base + (state === 1 ? 1 : 0));
+  };
+  const apply = () => {
+    up.classList.toggle('voted-up', state === 1);
+    down.classList.toggle('voted-down', state === -1);
+    entry.classList.toggle('voted', state === 1);
+    entry.classList.toggle('downvoted', state === -1);
+    ptsEl?.classList.toggle('up', state === 1);
+    updateNum();
+  };
+  up.addEventListener('click', () => { state = state === 1 ? 0 : 1; apply(); });
+  down.addEventListener('click', () => { state = state === -1 ? 0 : -1; apply(); });
+});
+</script>
+
+</body>
+</html>

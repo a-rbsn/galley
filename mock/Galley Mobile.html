@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Galley — Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<style>
+  :root {
+    /* Reddit-adjacent: warm paper, deep ink, muted terracotta-orange accent */
+    --paper:        oklch(98% 0.008 70);
+    --paper-2:      oklch(95.5% 0.012 70);
+    --ink:          oklch(20% 0.012 50);
+    --ink-2:        oklch(36% 0.014 50);
+    --ink-3:        oklch(54% 0.014 50);
+    --ink-4:        oklch(70% 0.012 60);
+    --rule:         oklch(86% 0.010 60);
+    --rule-strong:  oklch(72% 0.014 60);
+    --accent:       oklch(54% 0.16 38);
+    --accent-deep:  oklch(40% 0.13 38);
+    --serif:  "Source Serif 4", Georgia, serif;
+    --sans:   "Inter", -apple-system, sans-serif;
+    --mono:   "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: oklch(88% 0.020 60); min-height: 100vh; }
+  body { display: flex; align-items: center; justify-content: center; padding: 24px 0; font-family: var(--serif); }
+
+  /* ───────── App shell inside iOS frame ───────── */
+  .app {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    height: 100%;
+    display: flex; flex-direction: column;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern", "liga", "onum";
+  }
+
+  /* Top — masthead, tight */
+  .top {
+    padding: 50px 16px 6px;
+    border-bottom: 1px solid var(--ink);
+    background: var(--paper);
+    position: sticky; top: 0; z-index: 5;
+  }
+  .top-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .nameplate {
+    font-family: var(--serif);
+    font-size: 22px;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    font-variation-settings: "opsz" 60;
+  }
+  .nameplate .dot { color: var(--accent); }
+  .top-meta {
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Section bar — horizontal scroller */
+  .sectionbar {
+    display: flex; gap: 18px;
+    padding: 8px 16px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper);
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    position: sticky; top: 0; z-index: 4;
+    scrollbar-width: none;
+  }
+  .sectionbar::-webkit-scrollbar { display: none; }
+  .sectionbar a { color: inherit; text-decoration: none; white-space: nowrap; padding: 2px 0; }
+  .sectionbar a.active { color: var(--ink); border-bottom: 1px solid var(--ink); }
+
+  /* Sort row */
+  .sortrow {
+    padding: 6px 16px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper-2);
+  }
+  .sortrow .label {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .sortrow .label strong { font-style: normal; color: var(--ink); font-weight: 500; }
+  .sortrow .sort {
+    font-family: var(--sans);
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: flex; gap: 10px;
+  }
+  .sortrow .sort a { color: inherit; text-decoration: none; }
+  .sortrow .sort a.active { color: var(--ink); }
+
+  /* ───────── FEED ───────── */
+  .feed {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 60px;
+  }
+
+  /* Swipe wrapper — sits behind the post and reveals the action gutter */
+  .swipe {
+    position: relative;
+    overflow: hidden;
+    background: var(--paper);
+    touch-action: pan-y;
+    user-select: none;
+  }
+  .swipe-gutter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    font-family: var(--sans);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+    pointer-events: none;
+    transition: opacity .12s;
+  }
+  .swipe-gutter.up {
+    background: var(--accent);
+    color: var(--paper);
+    justify-content: flex-start;
+    padding-left: 22px;
+  }
+  .swipe-gutter.down {
+    background: oklch(28% 0.014 50);
+    color: var(--paper);
+    justify-content: flex-end;
+    padding-right: 22px;
+  }
+  .swipe-gutter .glyph {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-style: normal;
+    margin-right: 8px;
+    transition: transform .15s;
+  }
+  .swipe-gutter.down .glyph { margin-right: 0; margin-left: 8px; order: 2; }
+  .swipe-gutter.armed .glyph { transform: scale(1.4); }
+  .swipe-gutter.armed { filter: brightness(1.1); }
+  .swipe-content {
+    position: relative;
+    background: var(--paper);
+    will-change: transform;
+  }
+  .swipe-content.dragging { transition: none; }
+  .swipe-content.snapping { transition: transform .22s cubic-bezier(.2,.7,.2,1); }
+
+  /* Onboarding hint */
+  .swipe-hint {
+    margin: 8px 16px 0;
+    padding: 8px 12px;
+    border: 1px solid var(--rule-strong);
+    background: var(--paper-2);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 12px;
+    color: var(--ink-2);
+    line-height: 1.35;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    position: relative;
+  }
+  .swipe-hint .arrow-pair {
+    font-family: var(--serif);
+    font-style: normal;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    flex-shrink: 0;
+  }
+  .swipe-hint .arrow-pair .up { color: var(--accent); }
+  .swipe-hint .dismiss {
+    position: absolute;
+    top: 4px; right: 8px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--ink-4);
+    cursor: pointer;
+    line-height: 1;
+    padding: 2px 4px;
+  }
+  .swipe-hint .dismiss:hover { color: var(--ink); }
+
+  /* Each post — tight strip */
+  .post {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding: 6px 0 7px 18px;
+    border-bottom: 1px solid var(--rule);
+    align-items: stretch;
+    position: relative;
+  }
+  .post.has-thumb {
+    padding-right: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .post.has-thumb .p-body {
+    padding-top: 6px;
+    padding-bottom: 7px;
+  }
+  .post:not(.has-thumb) { padding-right: 16px; }
+  /* Voted-up marker — thin accent rule on the row's left edge */
+  .post.voted::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--accent);
+  }
+  .post.downvoted::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: oklch(40% 0.014 50);
+  }
+  .post.downvoted .p-title { color: var(--ink-3); }
+
+  /* Thumbnail — image/video posts: full row height, no border, runs to row edge */
+  .p-thumb {
+    align-self: stretch;
+    width: auto;
+    aspect-ratio: 1 / 1;
+    border: none;
+    background: var(--paper-2);
+    position: relative;
+    overflow: hidden;
+    margin-top: 0;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+  }
+  .p-thumb.placeholder {
+    background:
+      repeating-linear-gradient(135deg,
+        oklch(94% 0.008 80) 0 4px,
+        oklch(91% 0.010 80) 4px 8px);
+  }
+  .p-thumb .badge {
+    position: absolute;
+    bottom: 0; left: 0;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--sans);
+    font-size: 7px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    padding: 1px 3px 1px 4px;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+  .p-thumb .badge.video {
+    background: var(--accent);
+  }
+  .p-thumb .play {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--paper);
+    font-size: 14px;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    font-family: var(--serif);
+  }
+  .p-thumb .gallery-stack {
+    position: absolute;
+    top: -3px; right: -3px;
+    width: 100%; height: 100%;
+    border: 1px solid var(--rule-strong);
+    background: var(--paper-2);
+    z-index: -1;
+  }
+  .p-thumb .duration {
+    position: absolute;
+    bottom: 2px; right: 2px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    font-family: var(--mono);
+    font-size: 8px;
+    padding: 1px 3px;
+    line-height: 1.1;
+    letter-spacing: 0;
+  }
+  .post:active { background: var(--paper-2); }
+
+  /* Body */
+  .p-body { min-width: 0; }
+  .p-kicker {
+    font-family: var(--sans);
+    font-size: 8.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 0;
+    line-height: 1.3;
+    display: flex; align-items: baseline; gap: 6px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+  .p-kicker > span { flex-shrink: 0; }
+  .p-kicker .sub { color: var(--accent); }
+  .p-kicker .domain {
+    font-family: var(--sans);
+    font-size: 9px;
+    color: var(--ink-3);
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+  .p-kicker .domain::before { content: "↗ "; color: var(--ink-4); }
+  .p-kicker .tag {
+    color: var(--ink-3);
+    font-weight: 500;
+    border-left: 1px solid var(--rule-strong);
+    padding-left: 6px;
+    letter-spacing: 0.14em;
+  }
+  .p-kicker .tag.discussion { color: var(--accent); }
+  .p-kicker .tag.pinned { color: var(--ink); }
+
+  .p-byline {
+    margin-top: 2px;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-3);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-feature-settings: "kern", "liga", "onum";
+    font-variant-numeric: oldstyle-nums;
+  }
+  .p-byline .author { font-style: normal; color: var(--ink-2); }
+  .p-byline .sep { margin: 0 6px; color: var(--ink-4); font-style: normal; }
+  .p-byline .time { font-style: italic; color: var(--ink-4); }
+  /* upvote/downvote glyphs in byline removed — left rule does the marking */
+  .p-byline .voted-up,
+  .p-byline .voted-down { display: none; }
+
+  .p-title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.18;
+    letter-spacing: -0.005em;
+    margin: 1px 0 0;
+    color: var(--ink);
+    text-wrap: pretty;
+    /* clamp to 2 lines max */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* Posts without a byline (pinned) need slightly more breathing room */
+  .post.pinned .p-title { -webkit-line-clamp: 2; }
+  .p-title em { font-style: italic; }
+
+  /* byline now lives inline in kicker; .p-byline removed */
+
+  /* Right column — thumbnail only when present; comment count moved into byline */
+
+  /* Pinned post variant */
+  .post.pinned .p-title { font-style: italic; color: var(--ink-2); }
+
+  /* Section break */
+  .break {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px 6px;
+    color: var(--ink-3);
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    background: var(--paper);
+  }
+  .break::before, .break::after {
+    content: ""; flex: 1; border-top: 1px solid var(--rule);
+  }
+  .break .ornament {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-4);
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  /* ───────── Bottom tab bar ───────── */
+  .tabbar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 60px;
+    background: var(--paper);
+    border-top: 1px solid var(--ink);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+    z-index: 10;
+    padding-bottom: 18px;
+  }
+  .tab {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-family: var(--sans);
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .tab .glyph {
+    font-family: var(--serif);
+    font-size: 16px;
+    line-height: 1;
+    font-style: italic;
+    color: var(--ink-3);
+  }
+  .tab.active { color: var(--ink); }
+  .tab.active .glyph { color: var(--accent); font-style: normal; }
+
+  /* Caption under the device */
+  .caption {
+    color: oklch(34% 0.014 50);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 18px;
+    max-width: 380px;
+    line-height: 1.5;
+  }
+  .caption strong { font-style: normal; font-family: var(--sans); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: oklch(20% 0.012 50); display: block; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+const POSTS = [
+  { sub: "slatestarcodex", flair: "Essay", title: "On the quiet death of the lurker, and what we lost when every reader became a poster", author: "scott_a", time: "7h", votes: "14.2k", upvoted: true, comments: "1.8k", kind: "text" },
+  { sub: "urbanism",       flair: "Article",    title: "Lisbon's experiment with car-free arteries is two years old. The data is unambiguous, the politics are not.", author: "transit_planner_pt", time: "11h", votes: "8,914", upvoted: true, comments: "962", kind: "link", domain: "bloomberg.com", thumbHue: 220 },
+  { sub: "AskHistorians",  flair: "Question",   title: "When did ordinary people in medieval Europe first start owning books, as opposed to merely encountering them?", author: "codex_curious", time: "3h", votes: "3,402", comments: "214", kind: "text" },
+  { sub: "MachineLearning",flair: "Paper",      title: "A 2.1B-parameter model trained only on textbooks matches GPT-3.5 on MMLU. The authors argue curriculum, not scale.", author: "grad_descent", time: "9h", votes: "6,238", upvoted: true, comments: "487", kind: "link", domain: "arxiv.org" },
+  { sub: "ArchitecturePorn",flair: "Photo",     title: "The reading room at the Stockholm Public Library, photographed at the moment the lights came on", author: "ehrling_lens", time: "14h", votes: "11.7k", upvoted: true, comments: "328", kind: "image", thumbHue: 50, thumbLabel: "IMG" },
+  { sub: "books",          flair: "Discussion", title: "Re-reading Middlemarch at thirty-eight is a different novel than the one I gave up on at twenty", author: "eliotinmiddleage", time: "5h", votes: "4,156", comments: "691", kind: "text" },
+  { sub: "ArtisanVideos",  flair: "Video",      title: "A Kyoto bookbinder repairs a 17th-century almanac in real time, narrated by his apprentice", author: "slow_hands", time: "4h", votes: "9,341", upvoted: true, comments: "203", kind: "video", thumbHue: 15, duration: "12:08" },
+  { sub: "news",           flair: "Wire",       title: "Japan's population fell by 781,000 last year, the steepest decline on record; rural prefectures account for almost all of it.", author: "wire_reader", time: "2h", votes: "22.4k", upvoted: true, comments: "3.2k", kind: "link", domain: "reuters.com" },
+  { sub: "fountainpens",   flair: "Show & Tell",title: "After eleven years of daily use, the nib on my Pelikan M400 has finally written itself into a shape that's mine", author: "inkwell_thoughts", time: "6h", votes: "847", comments: "73", kind: "image", thumbHue: 280, thumbLabel: "IMG" },
+  { sub: "AskHistorians",  flair: "Mod note",   title: "A reminder, gently — top-level answers must cite primary or peer-reviewed sources", author: "mod_team", time: "2d", votes: "—", comments: "42", kind: "pinned" },
+  { sub: "TrueFilm",       flair: "Analysis",   title: "Hou Hsiao-hsien doesn't cut away from people thinking, and that single decision is most of his style", author: "static_camera", time: "12h", votes: "5,612", upvoted: true, comments: "418", kind: "text" },
+  { sub: "malefashionadvice",flair: "Gallery",  title: "Twelve months of building a wardrobe around three colors and one fabric weight — the in-progress shots", author: "navy_oxford", time: "10h", votes: "3,278", comments: "189", kind: "gallery", thumbHue: 200, count: 12 },
+  { sub: "cscareerquestions",flair: "Advice",   title: "Six years in, three companies deep, and I've started to suspect the senior title is mostly a permission slip to say no", author: "quietly_senior", time: "8h", votes: "1,287", comments: "256", kind: "text" },
+  { sub: "AskCulinary",    flair: "Technique",  title: "A working theory of why my mother's roast chicken is better than mine, after twelve attempts to copy it", author: "sundayroast", time: "19h", votes: "2,041", comments: "312", kind: "image", thumbHue: 35, thumbLabel: "IMG" },
+  { sub: "chess",          flair: "Game",       title: "Annotated: a 38-move endgame from last night's club blitz where I'm fairly sure the engine is wrong about move 24", author: "kingside_kettle", time: "1h", votes: "612", comments: "94", kind: "text" },
+  { sub: "DepthHub",       flair: "Cross-post", title: "An unusually patient explanation of why container ports cannot simply hire more longshoremen", author: "logistics_curious", time: "16h", votes: "3,891", upvoted: true, comments: "201", kind: "link", domain: "self" },
+];
+
+function Thumb({ p }) {
+  // Subtle hue-derived gradient as a stand-in for a real image, kept restrained.
+  const h = p.thumbHue ?? 60;
+  const bg = `linear-gradient(135deg, oklch(74% 0.07 ${h}) 0%, oklch(48% 0.10 ${h}) 70%, oklch(32% 0.08 ${h+20}) 100%)`;
+  const isVideo = p.kind === "video";
+  const isGallery = p.kind === "gallery";
+
+  return (
+    <div className="p-thumb" style={{ background: bg, position: 'relative' }}>
+      {/* Faux-photographic texture: very subtle diagonal noise */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 3px)',
+        mixBlendMode: 'overlay',
+      }} />
+      {isVideo && <span className="play">▶</span>}
+      {isVideo && p.duration && <span className="duration">{p.duration}</span>}
+      {isGallery && (
+        <span className="badge">{p.count ? `×${p.count}` : 'GALLERY'}</span>
+      )}
+      {!isVideo && !isGallery && p.thumbLabel && (
+        <span className="badge">{p.thumbLabel}</span>
+      )}
+    </div>
+  );
+}
+
+function Post({ p, voted }) {
+  const isPinned = p.kind === "pinned";
+  const hasThumb = p.kind === "image" || p.kind === "video" || p.kind === "gallery";
+  const isVoted = voted === 1 && !isPinned;
+  const isDownvoted = voted === -1 && !isPinned;
+  return (
+    <article className={"post" + (isPinned ? " pinned" : "") + (isVoted ? " voted" : "") + (isDownvoted ? " downvoted" : "") + (hasThumb ? " has-thumb" : "")}>
+      <div className="p-body">
+        <div className="p-kicker">
+          <span className="sub">r/{p.sub}</span>
+          {p.domain && p.domain !== "self" && <span className="domain">{p.domain}</span>}
+        </div>
+        <h3 className="p-title">{p.title}</h3>
+        {!isPinned ? (
+          <div className="p-byline">
+            {isVoted && <span className="voted-up">▲</span>}
+            {isDownvoted && <span className="voted-down">▼</span>}
+            <span className="author">u/{p.author}</span>
+            <span className="sep">·</span>
+            <span>{p.votes} pts</span>
+            <span className="sep">·</span>
+            <span>{p.comments} comments</span>
+            <span className="sep">·</span>
+            <span className="time">{p.time}</span>
+          </div>
+        ) : (
+          <div className="p-byline">
+            <span className="author">u/{p.author}</span>
+            <span className="sep">·</span>
+            <span className="time">pinned, {p.time}</span>
+          </div>
+        )}
+      </div>
+      {hasThumb && <Thumb p={p} />}
+    </article>
+  );
+}
+
+const SWIPE_THRESHOLD = 64;   // px to commit
+const SWIPE_MAX = 110;        // visual cap
+
+function SwipePost({ p, voted, onVote }) {
+  const isPinned = p.kind === "pinned";
+  const contentRef = useRef(null);
+  const stateRef = useRef({ x: 0, y: 0, dragging: false, lockAxis: null, dx: 0 });
+  const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [snapping, setSnapping] = useState(false);
+
+  if (isPinned) {
+    return <Post p={p} voted={voted} />;
+  }
+
+  const armed = Math.abs(dx) >= SWIPE_THRESHOLD;
+  const direction = dx > 0 ? "up" : dx < 0 ? "down" : null;
+
+  const onPointerDown = (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    contentRef.current.setPointerCapture(e.pointerId);
+    stateRef.current = { x: e.clientX, y: e.clientY, dragging: true, lockAxis: null, dx: 0 };
+  };
+  const onPointerMove = (e) => {
+    const s = stateRef.current;
+    if (!s.dragging) return;
+    const ddx = e.clientX - s.x;
+    const ddy = e.clientY - s.y;
+    if (s.lockAxis === null) {
+      if (Math.abs(ddx) < 6 && Math.abs(ddy) < 6) return;
+      s.lockAxis = Math.abs(ddx) > Math.abs(ddy) ? 'x' : 'y';
+      if (s.lockAxis === 'x') setDragging(true);
+    }
+    if (s.lockAxis !== 'x') return;
+    e.preventDefault();
+    // soft cap with rubber band past SWIPE_MAX
+    let next = ddx;
+    if (Math.abs(next) > SWIPE_MAX) {
+      const overflow = Math.abs(next) - SWIPE_MAX;
+      next = Math.sign(next) * (SWIPE_MAX + overflow * 0.25);
+    }
+    s.dx = next;
+    setDx(next);
+  };
+  const onPointerUp = (e) => {
+    const s = stateRef.current;
+    if (!s.dragging) return;
+    s.dragging = false;
+    if (s.lockAxis !== 'x') { setDragging(false); return; }
+    setDragging(false);
+    setSnapping(true);
+    if (Math.abs(s.dx) >= SWIPE_THRESHOLD) {
+      onVote(s.dx > 0 ? 1 : -1);
+    }
+    s.dx = 0;
+    setDx(0);
+    setTimeout(() => setSnapping(false), 240);
+  };
+
+  return (
+    <div className="swipe">
+      {dx > 0 && (
+        <div className={"swipe-gutter up" + (armed ? " armed" : "")}>
+          <span className="glyph">▲</span>
+          {voted === 1 ? "Remove vote" : "Upvote"}
+        </div>
+      )}
+      {dx < 0 && (
+        <div className={"swipe-gutter down" + (armed ? " armed" : "")}>
+          <span className="glyph">▼</span>
+          {voted === -1 ? "Remove vote" : "Downvote"}
+        </div>
+      )}
+      <div
+        ref={contentRef}
+        className={"swipe-content" + (dragging ? " dragging" : "") + (snapping ? " snapping" : "")}
+        style={{ transform: `translateX(${dx}px)` }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      >
+        <Post p={p} voted={voted} />
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [sort, setSort] = useState("Hot");
+  const [section, setSection] = useState("Front");
+  const [tab, setTab] = useState("Feed");
+  // votes: Map<postIndex, -1 | 0 | 1>; initialize from p.upvoted
+  const [votes, setVotes] = useState(() => {
+    const m = {};
+    POSTS.forEach((p, i) => { if (p.upvoted) m[i] = 1; });
+    return m;
+  });
+  const setVote = (i, dir) => {
+    setVotes(v => {
+      const cur = v[i] || 0;
+      const next = cur === dir ? 0 : dir;
+      return { ...v, [i]: next };
+    });
+  };
+
+  const renderPost = (p, i) => (
+    <SwipePost key={i} p={p} voted={votes[i] || 0} onVote={(d) => setVote(i, d)} />
+  );
+
+  return (
+    <div className="app">
+      {/* Masthead */}
+      <header className="top">
+        <div className="top-row">
+          <div className="nameplate">Galley<span className="dot">.</span></div>
+          <div className="top-meta">Sat · Apr 25</div>
+        </div>
+      </header>
+
+      {/* Section bar */}
+      <nav className="sectionbar">
+        {["Front", "Popular", "All", "News", "Letters", "Tech", "Books", "Film", "Cities", "Science"].map(s => (
+          <a key={s} href="#" className={section === s ? "active" : ""} onClick={e => { e.preventDefault(); setSection(s); }}>{s === "Front" ? "Front Page" : s}</a>
+        ))}
+      </nav>
+
+      {/* Sort */}
+      <div className="sortrow">
+        <div className="label"><strong>{POSTS.length}</strong> entries · <em>front page</em></div>
+        <div className="sort">
+          {["Hot", "New", "Top", "Rising"].map(s => (
+            <a key={s} href="#" className={sort === s ? "active" : ""} onClick={e => { e.preventDefault(); setSort(s); }}>{s}</a>
+          ))}
+        </div>
+      </div>
+
+      {/* Feed */}
+      <div className="feed">
+        {POSTS.slice(0, 8).map((p, i) => renderPost(p, i))}
+        <div className="break"><span className="ornament">§</span></div>
+        {POSTS.slice(8).map((p, i) => renderPost(p, i + 8))}
+        <div className="break"><span className="ornament">— end of front page —</span></div>
+      </div>
+
+      {/* Tab bar */}
+      <nav className="tabbar">
+        {[
+          { id: "Feed", glyph: "¶" },
+          { id: "Subs", glyph: "ℛ" },
+          { id: "Post", glyph: "+" },
+          { id: "Inbox", glyph: "✉" },
+          { id: "Me", glyph: "u" },
+        ].map(t => (
+          <div key={t.id} className={"tab" + (tab === t.id ? " active" : "")} onClick={() => setTab(t.id)}>
+            <span className="glyph">{t.glyph}</span>
+            <span>{t.id}</span>
+          </div>
+        ))}
+      </nav>
+    </div>
+  );
+}
+
+function Page() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <IOSDevice width={390} height={844}>
+        <App />
+      </IOSDevice>
+      <div className="caption">
+        <strong>Galley · Mobile</strong>
+        Each post is a 3-line strip — kicker, title clamped at three lines, italic byline. Roughly 8–9 entries above the fold; the whole front page in two thumbs.
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Page />);
+</script>
+
+</body>
+</html>
