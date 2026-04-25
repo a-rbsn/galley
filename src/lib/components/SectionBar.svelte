@@ -58,7 +58,9 @@
 	}
 	.sectionbar a.active {
 		color: var(--ink);
-		box-shadow: 0 1px 0 var(--ink);
+		text-decoration: underline;
+		text-decoration-thickness: 1px;
+		text-underline-offset: 2px;
 	}
 	.sectionbar .sep {
 		color: var(--ink-4);
