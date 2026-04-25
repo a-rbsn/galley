@@ -80,5 +80,10 @@
 			border-top: none;
 			padding-top: 6px;
 		}
+		.feed > .empty,
+		.feed > .more {
+			padding-left: var(--page-pad-x-mobile);
+			padding-right: var(--page-pad-x-mobile);
+		}
 	}
 </style>

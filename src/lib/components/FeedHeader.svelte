@@ -82,7 +82,7 @@
 
 	@media (max-width: 760px) {
 		.feed-header {
-			padding: 0 0 10px;
+			padding: 0 var(--page-pad-x-mobile) 10px;
 		}
 		.feed-title {
 			font-size: 17px;

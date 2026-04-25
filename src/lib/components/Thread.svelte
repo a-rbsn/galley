@@ -358,7 +358,13 @@
 	@media (max-width: 760px) {
 		.thread {
 			border-top: none;
-			padding-top: 6px;
+			padding: 6px var(--page-pad-x-mobile) 18px;
+		}
+		.hero,
+		.thread :global(.player),
+		.thread :global(.gallery) {
+			margin-left: calc(-1 * var(--page-pad-x-mobile));
+			margin-right: calc(-1 * var(--page-pad-x-mobile));
 		}
 		.title {
 			font-size: 24px;

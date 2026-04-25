@@ -226,7 +226,7 @@
 	@media (max-width: 760px) {
 		.settings {
 			border-top: none;
-			padding-top: 6px;
+			padding: 6px var(--page-pad-x-mobile) 0;
 		}
 		h1 {
 			font-size: 24px;

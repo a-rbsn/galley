@@ -140,6 +140,13 @@
 			border-top: none;
 			padding-top: 6px;
 		}
+		.onboarding,
+		.feed > .errors,
+		.feed > .empty,
+		.feed > .footnote {
+			padding-left: var(--page-pad-x-mobile);
+			padding-right: var(--page-pad-x-mobile);
+		}
 		h1 {
 			font-size: 26px;
 		}

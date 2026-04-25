@@ -81,4 +81,10 @@
 		color: var(--ink-3);
 		padding: 18px 0;
 	}
+	@media (max-width: 760px) {
+		.comments {
+			padding-left: var(--page-pad-x-mobile);
+			padding-right: var(--page-pad-x-mobile);
+		}
+	}
 </style>
