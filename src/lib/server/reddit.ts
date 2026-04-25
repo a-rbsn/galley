@@ -251,7 +251,9 @@ export function rawPostToView(post: RawPost): PostView {
 		score: d.score,
 		numComments: d.num_comments,
 		createdUtc: d.created_utc,
-		permalink: d.permalink,
+		// Galley-internal permalink — strips Reddit's title slug so it matches
+		// the /r/[subreddit]/comments/[id] route shape. Always lowercase.
+		permalink: `/r/${d.subreddit.toLowerCase()}/comments/${d.id}`,
 		url: d.url,
 		domain: d.domain,
 		isSelf: d.is_self,
