@@ -358,7 +358,7 @@
 	@media (max-width: 760px) {
 		.thread {
 			border-top: none;
-			padding: 6px var(--page-pad-x-mobile) 18px;
+			padding: 16px var(--page-pad-x-mobile) 18px;
 		}
 		.hero,
 		.thread :global(.player),

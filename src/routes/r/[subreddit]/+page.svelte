@@ -78,7 +78,7 @@
 	@media (max-width: 760px) {
 		.feed {
 			border-top: none;
-			padding-top: 6px;
+			padding-top: 0;
 		}
 		.feed > .empty,
 		.feed > .more {

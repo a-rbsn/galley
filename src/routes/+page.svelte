@@ -138,7 +138,7 @@
 	@media (max-width: 760px) {
 		.home {
 			border-top: none;
-			padding-top: 6px;
+			padding-top: 0;
 		}
 		.onboarding,
 		.feed > .errors,
@@ -146,6 +146,9 @@
 		.feed > .footnote {
 			padding-left: var(--page-pad-x-mobile);
 			padding-right: var(--page-pad-x-mobile);
+		}
+		.onboarding {
+			padding-top: 24px;
 		}
 		h1 {
 			font-size: 26px;

@@ -56,7 +56,7 @@
 	@media (max-width: 760px) {
 		.page {
 			grid-template-columns: minmax(0, 1fr);
-			padding: 20px 0 40px;
+			padding: 0 0 40px;
 			gap: 0;
 		}
 		.trail {
