@@ -73,6 +73,7 @@
 
 	.body {
 		min-width: 0;
+		align-self: center;
 	}
 
 	.kicker {
