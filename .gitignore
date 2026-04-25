@@ -1,0 +1,7 @@
+# Ignore everything by default.
+*
+
+# Allow only these.
+!README.md
+!LICENSE
+!.gitignore
