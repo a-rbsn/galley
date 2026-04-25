@@ -3,6 +3,8 @@
 	import { relativeTime } from '$lib/util/time';
 	import { formatScore, formatCount } from '$lib/util/format';
 	import { placeholderBg, pickHero } from '$lib/util/thumb';
+	import VideoPlayer from './VideoPlayer.svelte';
+	import Gallery from './Gallery.svelte';
 
 	let { post }: { post: PostView } = $props();
 
@@ -14,6 +16,12 @@
 		heroUrl
 			? `url(${JSON.stringify(heroUrl)}) center/contain no-repeat`
 			: placeholderBg(post.hueSeed ?? post.subreddit)
+	);
+	const canPlayVideo = $derived(
+		post.kind === 'video' && (!!post.videoUrl || !!post.videoHlsUrl)
+	);
+	const canShowGallery = $derived(
+		post.kind === 'gallery' && !!post.galleryItems && post.galleryItems.length > 0
 	);
 </script>
 
@@ -39,7 +47,18 @@
 		<span class="time">{relativeTime(post.createdUtc)}</span>
 	</div>
 
-	{#if post.kind === 'image' || post.kind === 'video' || post.kind === 'gallery'}
+	{#if canPlayVideo}
+		<VideoPlayer
+			src={post.videoUrl}
+			hlsUrl={post.videoHlsUrl}
+			poster={post.videoPoster ?? heroUrl}
+			isGif={post.videoIsGif}
+			width={post.videoWidth}
+			height={post.videoHeight}
+		/>
+	{:else if canShowGallery}
+		<Gallery items={post.galleryItems ?? []} />
+	{:else if post.kind === 'image' || post.kind === 'video' || post.kind === 'gallery'}
 		<a class="hero" href={post.url} target="_blank" rel="noopener noreferrer" aria-label="Open media on Reddit">
 			{#if heroUrl}
 				<img class="hero-img" src={heroUrl} alt={post.title} loading="lazy" referrerpolicy="no-referrer" />

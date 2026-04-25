@@ -144,12 +144,27 @@ export interface RawPostData {
 	};
 	is_video: boolean;
 	is_gallery?: boolean;
-	gallery_data?: { items: Array<{ media_id: string; id: number }> };
+	gallery_data?: { items: Array<{ media_id: string; id: number; caption?: string }> };
 	media_metadata?: Record<
 		string,
-		{ e?: string; m?: string; s?: { u?: string; gif?: string } }
+		{
+			e?: string;
+			m?: string;
+			s?: { u?: string; gif?: string; mp4?: string; x?: number; y?: number };
+			p?: Array<{ u: string; x: number; y: number }>;
+		}
 	>;
-	media?: { reddit_video?: { duration: number } };
+	media?: {
+		reddit_video?: {
+			duration: number;
+			fallback_url?: string;
+			hls_url?: string;
+			dash_url?: string;
+			height?: number;
+			width?: number;
+			is_gif?: boolean;
+		};
+	};
 	post_hint?: string;
 	link_flair_text?: string | null;
 	stickied?: boolean;
@@ -259,8 +274,39 @@ function formatDuration(seconds: number): string {
 	return `${m}:${s}`;
 }
 
+function pickGalleryItems(d: RawPostData): PostView['galleryItems'] {
+	if (!d.is_gallery || !d.gallery_data || !d.media_metadata) return undefined;
+	const items = d.gallery_data.items
+		.map((item) => {
+			const m = d.media_metadata?.[item.media_id];
+			if (!m?.s) return null;
+			const url = (m.s.u ?? m.s.gif ?? '').replace(/&amp;/g, '&');
+			if (!url) return null;
+			return {
+				url,
+				width: m.s.x ?? 0,
+				height: m.s.y ?? 0,
+				caption: item.caption
+			};
+		})
+		.filter((x): x is NonNullable<typeof x> => x !== null);
+	return items.length > 0 ? items : undefined;
+}
+
+function pickVideoPoster(d: RawPostData): string | undefined {
+	const previews = d.preview?.images?.[0]?.resolutions;
+	if (previews && previews.length > 0) {
+		const p = previews[previews.length - 1];
+		return p.url.replace(/&amp;/g, '&');
+	}
+	const src = d.preview?.images?.[0]?.source?.url;
+	if (src) return src.replace(/&amp;/g, '&');
+	return undefined;
+}
+
 export function rawPostToView(post: RawPost): PostView {
 	const d = post.data;
+	const rv = d.media?.reddit_video;
 	return {
 		id: d.id,
 		subreddit: d.subreddit.toLowerCase(),
@@ -282,9 +328,14 @@ export function rawPostToView(post: RawPost): PostView {
 		kind: determineKind(d),
 		isPinned: d.stickied || d.pinned || false,
 		galleryCount: d.is_gallery ? d.gallery_data?.items?.length : undefined,
-		videoDuration: d.media?.reddit_video?.duration
-			? formatDuration(d.media.reddit_video.duration)
-			: undefined,
+		galleryItems: pickGalleryItems(d),
+		videoUrl: rv?.fallback_url,
+		videoHlsUrl: rv?.hls_url,
+		videoPoster: rv ? pickVideoPoster(d) : undefined,
+		videoWidth: rv?.width,
+		videoHeight: rv?.height,
+		videoIsGif: rv?.is_gif,
+		videoDuration: rv?.duration ? formatDuration(rv.duration) : undefined,
 		flair: d.link_flair_text ?? undefined,
 		over18: d.over_18
 	};

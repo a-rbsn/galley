@@ -25,6 +25,13 @@ export interface PostView {
 	isPinned?: boolean;
 	hueSeed?: number;
 	galleryCount?: number;
+	galleryItems?: Array<{ url: string; width: number; height: number; caption?: string }>;
+	videoUrl?: string;
+	videoHlsUrl?: string;
+	videoPoster?: string;
+	videoWidth?: number;
+	videoHeight?: number;
+	videoIsGif?: boolean;
 	videoDuration?: string;
 	flair?: string;
 	over18?: boolean;
