@@ -112,9 +112,6 @@
 		text-underline-offset: 3px;
 	}
 
-	.feed {
-	}
-
 	.errors {
 		font-family: var(--serif);
 		color: var(--ink-3);

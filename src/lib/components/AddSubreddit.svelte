@@ -70,6 +70,22 @@
 		results.filter((r) => !subsState.list.includes(r.name.toLowerCase()))
 	);
 
+	// Reddit's virtual feeds and a few high-traffic defaults — surface them
+	// when the picker is idle so they're a one-tap add.
+	const SUGGESTED = [
+		'all',
+		'popular',
+		'news',
+		'worldnews',
+		'askreddit',
+		'science',
+		'technology',
+		'todayilearned'
+	];
+	const filteredSuggestions = $derived(
+		SUGGESTED.filter((s) => !subsState.list.includes(s))
+	);
+
 	const trimmed = $derived(query.trim());
 	const canAddDirectly = $derived(
 		trimmed.length >= 2 && /^[a-z0-9_]{2,21}$/i.test(trimmed.replace(/^\/?r\//i, ''))
@@ -107,6 +123,15 @@
 		<div class="status"><em>Searching…</em></div>
 	{:else if error}
 		<div class="status error">{error}</div>
+	{/if}
+
+	{#if !trimmed && filteredSuggestions.length > 0}
+		<div class="suggestions">
+			<span class="suggestions-label">Try</span>
+			{#each filteredSuggestions as s (s)}
+				<button type="button" class="chip" onclick={() => add(s)}>r/{s}</button>
+			{/each}
+		</div>
 	{/if}
 
 	{#if filteredResults.length > 0}
@@ -254,5 +279,36 @@
 		border-radius: 2px;
 		color: var(--ink);
 		font-style: normal;
+	}
+
+	.suggestions {
+		margin-top: 14px;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 6px 8px;
+	}
+	.suggestions-label {
+		font-family: var(--sans);
+		font-size: 9.5px;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--ink-4);
+		margin-right: 4px;
+	}
+	.chip {
+		font-family: var(--sans);
+		font-size: 11px;
+		letter-spacing: 0.04em;
+		color: var(--ink-2);
+		background: transparent;
+		border: 1px solid var(--rule-strong);
+		padding: 4px 9px;
+		cursor: pointer;
+		font-style: normal;
+	}
+	.chip:hover {
+		border-color: var(--ink);
+		color: var(--ink);
 	}
 </style>
