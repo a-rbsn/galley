@@ -1,0 +1,45 @@
+/* Minimal reset, paired with tokens.css. */
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--serif);
+	font-size: 17px;
+	line-height: 1.45;
+	font-feature-settings: "kern", "liga", "onum";
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+}
+
+::selection {
+	background: var(--accent-soft);
+	color: var(--ink);
+}
+
+a {
+	color: inherit;
+}
+
+img,
+svg,
+video {
+	display: block;
+	max-width: 100%;
+}
+
+button {
+	font: inherit;
+	color: inherit;
+}
