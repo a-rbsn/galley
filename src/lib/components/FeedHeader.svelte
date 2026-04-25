@@ -85,7 +85,6 @@
 		.feed-header {
 			padding: 6px var(--page-pad-x-mobile);
 			background: var(--paper-2);
-			border-top: 1px solid var(--rule);
 			border-bottom: 1px solid var(--rule);
 			gap: 14px;
 		}

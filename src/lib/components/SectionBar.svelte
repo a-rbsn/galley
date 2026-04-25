@@ -24,6 +24,7 @@
 
 <style>
 	.sectionbar {
+		border-bottom: 1px solid var(--rule);
 		background: var(--paper);
 		position: sticky;
 		top: 59px;
