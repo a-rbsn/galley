@@ -57,7 +57,7 @@
 <style>
 	.entry {
 		display: grid;
-		grid-template-columns: 1fr 88px;
+		grid-template-columns: 1fr 72px;
 		gap: 22px;
 		padding: 14px 0 14px 14px;
 		border-bottom: 1px solid var(--rule);
@@ -137,8 +137,8 @@
 	.thumb {
 		position: relative;
 		align-self: stretch;
-		width: 88px;
-		min-height: 88px;
+		width: 72px;
+		min-height: 72px;
 		background: var(--paper-2);
 		overflow: hidden;
 		display: block;
@@ -209,7 +209,7 @@
 		.entry {
 			gap: 10px;
 			padding: 6px 0 7px var(--page-pad-x-mobile);
-			grid-template-columns: 1fr 88px;
+			grid-template-columns: 1fr 72px;
 		}
 		.entry:not(.no-thumb) {
 			padding-right: 0;
@@ -242,8 +242,8 @@
 			overflow: hidden;
 		}
 		.thumb {
-			width: 88px;
-			min-height: 88px;
+			width: 72px;
+			min-height: 72px;
 		}
 		.badge {
 			font-size: 7px;
