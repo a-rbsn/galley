@@ -15,10 +15,11 @@
 
 <div class="feed-header">
 	<h2 class="feed-title">
-		{#if title}
-			{title}{#if count != null}<span class="dim"> · {count} entries</span>{/if}
-		{:else if count != null}
-			<em>{count} entries</em>
+		{#if count != null}
+			<strong class="count">{count}</strong>
+			<em>entries{#if title} · {title}{/if}</em>
+		{:else if title}
+			<em>{title}</em>
 		{/if}
 	</h2>
 	<nav class="feed-sort" aria-label="Sort">
@@ -50,12 +51,13 @@
 	.feed-title em {
 		color: var(--ink-3);
 		font-weight: 300;
-	}
-	.feed-title .dim {
-		color: var(--ink-3);
-		font-weight: 300;
-		font-size: 14px;
 		font-style: italic;
+	}
+	.feed-title .count {
+		color: var(--ink);
+		font-weight: 500;
+		font-style: normal;
+		margin-right: 4px;
 	}
 	.feed-sort {
 		font-family: var(--sans);
@@ -81,10 +83,28 @@
 
 	@media (max-width: 760px) {
 		.feed-header {
-			padding: 0 var(--page-pad-x-mobile) 10px;
+			padding: 6px var(--page-pad-x-mobile);
+			background: var(--paper-2);
+			border-top: 1px solid var(--rule);
+			border-bottom: 1px solid var(--rule);
+			gap: 14px;
 		}
 		.feed-title {
-			font-size: 17px;
+			font-size: 12px;
+			font-variation-settings: 'opsz' 12;
+			letter-spacing: 0;
+		}
+		.feed-title .count {
+			margin-right: 2px;
+		}
+		.feed-sort {
+			font-size: 9.5px;
+			letter-spacing: 0.14em;
+			gap: 10px;
+		}
+		.feed-sort a.active {
+			border-bottom: none;
+			padding-bottom: 0;
 		}
 	}
 </style>
