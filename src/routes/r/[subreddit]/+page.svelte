@@ -49,7 +49,6 @@
 <style>
 	.feed {
 		border-top: 3px double var(--ink);
-		padding-top: 20px;
 	}
 	.empty {
 		font-family: var(--serif);

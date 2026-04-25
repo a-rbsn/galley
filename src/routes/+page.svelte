@@ -113,7 +113,6 @@
 	}
 
 	.feed {
-		padding-top: 4px;
 	}
 
 	.errors {
