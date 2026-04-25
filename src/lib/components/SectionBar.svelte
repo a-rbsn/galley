@@ -70,7 +70,7 @@
 
 	@media (max-width: 760px) {
 		.sectionbar {
-			top: 41px;
+			top: 43px;
 		}
 		.sectionbar-inner {
 			padding: 4px var(--page-pad-x-mobile);
