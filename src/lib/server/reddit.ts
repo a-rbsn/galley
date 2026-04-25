@@ -225,13 +225,31 @@ function determineKind(d: RawPostData): PostKind {
 }
 
 function pickThumbnail(d: RawPostData): string | undefined {
-	if (d.thumbnail && /^https?:/.test(d.thumbnail)) return d.thumbnail;
 	const previews = d.preview?.images?.[0]?.resolutions;
 	if (previews && previews.length > 0) {
-		const m = previews.find((r) => r.width >= 90) ?? previews[0];
+		const m = previews.find((r) => r.width >= 176) ?? previews[previews.length - 1];
 		return m.url.replace(/&amp;/g, '&');
 	}
+	if (d.thumbnail && /^https?:/.test(d.thumbnail)) return d.thumbnail;
 	return undefined;
+}
+
+function pickPreviewImages(
+	d: RawPostData
+): Array<{ url: string; width: number; height: number }> | undefined {
+	const img = d.preview?.images?.[0];
+	if (!img) return undefined;
+	const all = [...(img.resolutions ?? []), img.source].filter(
+		(r): r is { url: string; width: number; height: number } => !!r && typeof r.url === 'string'
+	);
+	if (all.length === 0) return undefined;
+	return all
+		.map((r) => ({
+			url: r.url.replace(/&amp;/g, '&'),
+			width: r.width,
+			height: r.height
+		}))
+		.sort((a, b) => a.width - b.width);
 }
 
 function formatDuration(seconds: number): string {
@@ -258,6 +276,7 @@ export function rawPostToView(post: RawPost): PostView {
 		domain: d.domain,
 		isSelf: d.is_self,
 		thumbnail: pickThumbnail(d),
+		previewImages: pickPreviewImages(d),
 		selftext: d.selftext || undefined,
 		selftextHtml: d.selftext_html ?? undefined,
 		kind: determineKind(d),

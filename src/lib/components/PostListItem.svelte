@@ -1,14 +1,16 @@
 <script lang="ts">
 	import type { PostView } from '$lib/types';
 	import PostMeta from './PostMeta.svelte';
-	import { placeholderBg, isUsableThumb } from '$lib/util/thumb';
+	import { placeholderBg, pickPreview } from '$lib/util/thumb';
 
 	let { post }: { post: PostView } = $props();
 
 	const hasThumb = $derived(
 		post.kind === 'image' || post.kind === 'video' || post.kind === 'gallery'
 	);
-	const realThumb = $derived(isUsableThumb(post.thumbnail) ? post.thumbnail : null);
+	// 88px display × 2 for retina = 176; pick the smallest preview at least
+	// that wide so the thumbnail stays crisp without pulling a 1080px image.
+	const realThumb = $derived(pickPreview(post, 176));
 	const fallbackBg = $derived(placeholderBg(post.hueSeed ?? post.subreddit));
 </script>
 

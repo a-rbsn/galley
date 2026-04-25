@@ -2,20 +2,17 @@
 	import type { PostView } from '$lib/types';
 	import { relativeTime } from '$lib/util/time';
 	import { formatScore, formatCount } from '$lib/util/format';
-	import { placeholderBg, isUsableThumb } from '$lib/util/thumb';
+	import { placeholderBg, pickHero } from '$lib/util/thumb';
 
 	let { post }: { post: PostView } = $props();
 
 	const externalUrl = $derived(
 		post.kind === 'link' && /^https?:\/\//.test(post.url) ? post.url : null
 	);
-	const showHero = $derived(
-		(post.kind === 'image' || post.kind === 'video' || post.kind === 'gallery') &&
-			(isUsableThumb(post.thumbnail) || true)
-	);
+	const heroUrl = $derived(pickHero(post));
 	const heroBg = $derived(
-		isUsableThumb(post.thumbnail)
-			? `url(${JSON.stringify(post.thumbnail)}) center/cover`
+		heroUrl
+			? `url(${JSON.stringify(heroUrl)}) center/contain no-repeat`
 			: placeholderBg(post.hueSeed ?? post.subreddit)
 	);
 </script>
@@ -44,7 +41,11 @@
 
 	{#if post.kind === 'image' || post.kind === 'video' || post.kind === 'gallery'}
 		<a class="hero" href={post.url} target="_blank" rel="noopener noreferrer" aria-label="Open media on Reddit">
-			<span class="hero-img" style:background={heroBg}></span>
+			{#if heroUrl}
+				<img class="hero-img" src={heroUrl} alt={post.title} loading="lazy" referrerpolicy="no-referrer" />
+			{:else}
+				<span class="hero-img hero-fallback" style:background={heroBg}></span>
+			{/if}
 			{#if post.kind === 'video'}
 				<span class="play">▶</span>
 				{#if post.videoDuration}
@@ -53,8 +54,6 @@
 				<span class="badge video">Video</span>
 			{:else if post.kind === 'gallery'}
 				<span class="badge">×{post.galleryCount ?? '·'}</span>
-			{:else}
-				<span class="badge">Photo</span>
 			{/if}
 			<span class="hero-note">Open on Reddit</span>
 		</a>
@@ -163,14 +162,22 @@
 		display: block;
 		position: relative;
 		margin-top: 20px;
-		aspect-ratio: 16 / 9;
-		max-height: 460px;
-		overflow: hidden;
+		background: var(--paper-2);
 		text-decoration: none;
+		max-height: 78vh;
+		overflow: hidden;
 	}
-	.hero-img {
-		position: absolute;
-		inset: 0;
+	.hero img.hero-img {
+		display: block;
+		width: 100%;
+		max-height: 78vh;
+		object-fit: contain;
+		margin: 0 auto;
+	}
+	.hero span.hero-img.hero-fallback {
+		display: block;
+		width: 100%;
+		aspect-ratio: 16 / 9;
 		background-size: cover;
 		background-position: center;
 	}
@@ -307,6 +314,26 @@
 	}
 	.selftext :global(h3) {
 		font-size: 17px;
+	}
+	.selftext :global(figure.image-embed) {
+		margin: 14px 0 18px;
+		max-width: 100%;
+	}
+	.selftext :global(figure.image-embed a) {
+		display: block;
+		background: var(--paper-2);
+		text-decoration: none;
+	}
+	.selftext :global(figure.image-embed img) {
+		display: block;
+		max-width: 100%;
+		max-height: 600px;
+		object-fit: contain;
+		margin: 0 auto;
+	}
+	.selftext :global(img) {
+		max-width: 100%;
+		height: auto;
 	}
 
 	@media (max-width: 760px) {

@@ -1,3 +1,5 @@
+import type { PostView } from '$lib/types';
+
 function hashHue(s: string): number {
 	let h = 0;
 	for (let i = 0; i < s.length; i++) {
@@ -21,4 +23,34 @@ export function isUsableThumb(url: string | undefined | null): boolean {
 	if (!url) return false;
 	if (!/^https?:/.test(url)) return false; // 'self', 'default', 'nsfw', 'spoiler', etc.
 	return true;
+}
+
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)(\?|$)/i;
+
+/**
+ * Smallest preview image at least `minWidth` wide, or the largest available
+ * if none is that big. Falls through to thumbnail if Reddit didn't return a
+ * preview block.
+ */
+export function pickPreview(post: PostView, minWidth: number): string | undefined {
+	const imgs = post.previewImages;
+	if (imgs && imgs.length > 0) {
+		const m = imgs.find((r) => r.width >= minWidth) ?? imgs[imgs.length - 1];
+		return m.url;
+	}
+	return isUsableThumb(post.thumbnail) ? post.thumbnail : undefined;
+}
+
+/**
+ * The largest reasonable image to show on the thread page. Prefers the
+ * post's direct image URL when it points straight at a file, then the
+ * largest preview Reddit pre-generated.
+ */
+export function pickHero(post: PostView): string | undefined {
+	if (post.url && IMAGE_EXT.test(post.url) && /^https?:/.test(post.url)) {
+		return post.url;
+	}
+	const imgs = post.previewImages;
+	if (imgs && imgs.length > 0) return imgs[imgs.length - 1].url;
+	return isUsableThumb(post.thumbnail) ? post.thumbnail : undefined;
 }

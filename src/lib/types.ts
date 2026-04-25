@@ -18,6 +18,7 @@ export interface PostView {
 	domain: string;
 	isSelf: boolean;
 	thumbnail?: string;
+	previewImages?: Array<{ url: string; width: number; height: number }>;
 	selftext?: string;
 	selftextHtml?: string;
 	kind: PostKind;

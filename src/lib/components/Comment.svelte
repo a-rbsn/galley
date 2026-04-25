@@ -190,6 +190,25 @@
 		padding-left: 22px;
 		margin: 0 0 8px;
 	}
+	.body :global(figure.image-embed) {
+		margin: 8px 0 12px;
+		max-width: 520px;
+	}
+	.body :global(figure.image-embed a) {
+		display: block;
+		text-decoration: none;
+		background: var(--paper-2);
+	}
+	.body :global(figure.image-embed img) {
+		display: block;
+		max-width: 100%;
+		max-height: 480px;
+		object-fit: contain;
+	}
+	.body :global(img) {
+		max-width: 100%;
+		height: auto;
+	}
 
 	.replies {
 		margin-top: 6px;
