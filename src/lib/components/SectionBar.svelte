@@ -32,13 +32,13 @@
 	.sectionbar-inner {
 		max-width: var(--page-max);
 		margin: 0 auto;
-		padding: 8px var(--page-pad-x);
+		padding: 4px var(--page-pad-x);
 		display: flex;
 		align-items: center;
-		gap: 28px;
+		gap: 22px;
 		font-family: var(--sans);
-		font-size: 11px;
-		letter-spacing: 0.14em;
+		font-size: 10.5px;
+		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		color: var(--ink-3);
 		overflow-x: auto;
@@ -51,7 +51,7 @@
 		color: inherit;
 		text-decoration: none;
 		white-space: nowrap;
-		padding: 4px 0;
+		padding: 2px 0;
 	}
 	.sectionbar a:hover {
 		color: var(--ink);
@@ -70,8 +70,9 @@
 			top: 41px;
 		}
 		.sectionbar-inner {
-			padding: 8px var(--page-pad-x-mobile);
-			gap: 18px;
+			padding: 4px var(--page-pad-x-mobile);
+			gap: 14px;
+			font-size: 10px;
 		}
 	}
 </style>
