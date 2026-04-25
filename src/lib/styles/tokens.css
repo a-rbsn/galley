@@ -27,7 +27,7 @@
 	--col-feed: 720px;
 	--col-rail: 168px;
 	--page-pad-x: 36px;
-	--page-pad-x-mobile: 16px;
+	--page-pad-x-mobile: 12px;
 	--gap: 56px;
 
 	/* Breakpoints (used in JS / @media inline) */

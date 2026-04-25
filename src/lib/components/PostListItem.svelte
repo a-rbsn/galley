@@ -207,8 +207,8 @@
 
 	@media (max-width: 760px) {
 		.entry {
-			gap: 12px;
-			padding: 6px 0 7px 18px;
+			gap: 10px;
+			padding: 6px 0 7px var(--page-pad-x-mobile);
 			grid-template-columns: 1fr 88px;
 		}
 		.entry:not(.no-thumb) {
@@ -221,7 +221,7 @@
 			padding-bottom: 7px;
 		}
 		.entry.no-thumb {
-			padding-right: 16px;
+			padding-right: var(--page-pad-x-mobile);
 		}
 		.kicker {
 			font-size: 8.5px;
