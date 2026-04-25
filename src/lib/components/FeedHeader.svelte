@@ -37,7 +37,6 @@
 		justify-content: space-between;
 		padding-bottom: 14px;
 		border-bottom: 1px solid var(--rule);
-		margin-bottom: 18px;
 		gap: 18px;
 	}
 	.feed-title {
