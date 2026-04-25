@@ -39,7 +39,7 @@
 		font-weight: 500;
 	}
 	.sep {
-		margin: 0 8px;
+		margin: 0 5px;
 		color: var(--ink-4);
 		font-style: normal;
 	}
@@ -81,7 +81,7 @@
 			text-overflow: ellipsis;
 		}
 		.sep {
-			margin: 0 6px;
+			margin: 0 4px;
 		}
 		.comments {
 			/* keep clickable but flow inline with the rest of the byline */
