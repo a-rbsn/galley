@@ -2,16 +2,18 @@
 	import '$lib/styles/tokens.css';
 	import '$lib/styles/reset.css';
 	import { onMount } from 'svelte';
+	import type { Snippet } from 'svelte';
 	import Masthead from '$lib/components/Masthead.svelte';
 	import SectionBar from '$lib/components/SectionBar.svelte';
 	import SubList from '$lib/components/SubList.svelte';
 	import Colophon from '$lib/components/Colophon.svelte';
 	import { hydrateSubs } from '$lib/stores/subs.svelte';
+	import type { LayoutData } from './$types';
 
-	let { children } = $props();
+	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
 	onMount(() => {
-		hydrateSubs();
+		hydrateSubs(data.subs);
 	});
 </script>
 
@@ -20,10 +22,10 @@
 </svelte:head>
 
 <Masthead />
-<SectionBar />
+<SectionBar subs={data.subs} />
 
 <main class="page">
-	<SubList />
+	<SubList subs={data.subs} />
 	<section class="content">
 		{@render children()}
 	</section>

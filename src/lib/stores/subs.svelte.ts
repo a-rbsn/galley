@@ -17,12 +17,22 @@ function readStorage(): string[] {
 	}
 }
 
+const COOKIE = 'galley_subs';
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
+
 function writeStorage(list: string[]) {
 	if (!browser) return;
 	try {
 		localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 	} catch {
 		// quota or disabled — ignore.
+	}
+	// Mirror to cookie so server-side load() can read the list.
+	try {
+		const value = encodeURIComponent(list.join(','));
+		document.cookie = `${COOKIE}=${value}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
+	} catch {
+		// ignore
 	}
 }
 
@@ -35,9 +45,19 @@ export const subsState = $state<{ list: string[]; hydrated: boolean }>({
 	hydrated: false
 });
 
-export function hydrateSubs() {
+export function hydrateSubs(serverSubs?: string[]) {
 	if (subsState.hydrated) return;
-	subsState.list = readStorage();
+	const fromStorage = readStorage();
+	// Prefer the server-known list (from cookie); fall back to localStorage; if
+	// they differ, mirror the server view to localStorage so the two agree.
+	const list = serverSubs && serverSubs.length > 0 ? serverSubs : fromStorage;
+	if (
+		list !== fromStorage &&
+		(list.length !== fromStorage.length || list.some((s, i) => s !== fromStorage[i]))
+	) {
+		writeStorage(list);
+	}
+	subsState.list = list;
 	subsState.hydrated = true;
 }
 

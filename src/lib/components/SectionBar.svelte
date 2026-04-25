@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { subsState } from '$lib/stores/subs.svelte';
+
+	let { subs }: { subs: string[] } = $props();
 
 	const path = $derived(page.url.pathname);
 	const activeSub = $derived.by(() => {
@@ -12,9 +13,9 @@
 <nav class="sectionbar" aria-label="Sections">
 	<div class="sectionbar-inner">
 		<a href="/" class:active={path === '/'}>Front Page</a>
-		{#if subsState.list.length > 0}
+		{#if subs.length > 0}
 			<span class="sep">●</span>
-			{#each subsState.list as sub (sub)}
+			{#each subs as sub (sub)}
 				<a href="/r/{sub}" class:active={activeSub === sub}>r/{sub}</a>
 			{/each}
 		{/if}

@@ -1,6 +1,19 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import AddSubreddit from '$lib/components/AddSubreddit.svelte';
+	import PostListItem from '$lib/components/PostListItem.svelte';
+	import FeedHeader from '$lib/components/FeedHeader.svelte';
 	import { subsState } from '$lib/stores/subs.svelte';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
+
+	const sortHref = (s: 'hot' | 'new' | 'top' | 'rising') => {
+		const u = new URL(page.url);
+		if (s === 'hot') u.searchParams.delete('sort');
+		else u.searchParams.set('sort', s);
+		return u.pathname + (u.search || '');
+	};
 </script>
 
 <svelte:head>
@@ -8,7 +21,7 @@
 </svelte:head>
 
 <section class="home">
-	{#if subsState.hydrated && subsState.list.length === 0}
+	{#if data.subs.length === 0}
 		<div class="onboarding">
 			<h1>Welcome.</h1>
 			<p class="lede">
@@ -24,13 +37,33 @@
 					<a href="/settings">settings page</a>.</em>
 			</p>
 		</div>
-	{:else if subsState.hydrated}
-		<div class="placeholder">
-			<h1>Front page</h1>
-			<p>
-				Following <strong>{subsState.list.length}</strong> subreddit{subsState.list.length === 1
-					? ''
-					: 's'}. The merged feed will land here next.
+	{:else}
+		<div class="feed">
+			<FeedHeader title="Front page" count={data.posts.length} sort={data.sort} {sortHref} />
+
+			{#if data.errors.length > 0}
+				<div class="errors">
+					{#each data.errors as err (err.sub)}
+						<p>
+							<em>r/{err.sub} couldn't be loaded — {err.message}</em>
+						</p>
+					{/each}
+				</div>
+			{/if}
+
+			{#each data.posts as post (post.id)}
+				<PostListItem {post} />
+			{/each}
+
+			{#if data.posts.length === 0 && data.errors.length === 0}
+				<p class="empty">
+					<em>No posts came back from Reddit for this combination of subreddits and sort.</em>
+				</p>
+			{/if}
+
+			<p class="footnote">
+				Following {data.subs.length} subreddit{data.subs.length === 1 ? '' : 's'}. Manage from
+				<a href="/settings">settings</a>.
 			</p>
 		</div>
 	{/if}
@@ -41,7 +74,6 @@
 		border-top: 3px double var(--ink);
 		padding-top: 28px;
 	}
-
 	.onboarding {
 		max-width: 60ch;
 	}
@@ -68,6 +100,8 @@
 		font-family: var(--serif);
 		font-size: 13px;
 		color: var(--ink-3);
+		font-style: italic;
+		margin-top: 22px;
 	}
 	.footnote a {
 		color: var(--accent);
@@ -78,14 +112,27 @@
 		text-underline-offset: 3px;
 	}
 
-	.placeholder h1 {
-		font-size: 22px;
+	.feed {
+		padding-top: 4px;
+	}
+
+	.errors {
+		font-family: var(--serif);
+		color: var(--ink-3);
+		font-size: 13px;
+		padding: 8px 0 14px;
+		border-bottom: 1px dashed var(--rule);
 		margin-bottom: 14px;
 	}
-	.placeholder p {
+	.errors p {
+		margin: 2px 0;
+	}
+
+	.empty {
 		font-family: var(--serif);
 		color: var(--ink-3);
 		font-style: italic;
+		padding: 22px 0;
 	}
 
 	@media (max-width: 760px) {

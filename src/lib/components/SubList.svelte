@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { subsState } from '$lib/stores/subs.svelte';
+
+	let { subs }: { subs: string[] } = $props();
 
 	const path = $derived(page.url.pathname);
 	const activeSub = $derived.by(() => {
@@ -22,11 +23,11 @@
 		</ul>
 	</div>
 
-	{#if subsState.list.length > 0}
+	{#if subs.length > 0}
 		<div class="rail-group">
 			<h4>Subscribed</h4>
 			<ul>
-				{#each subsState.list as sub (sub)}
+				{#each subs as sub (sub)}
 					<li class:active={activeSub === sub}>
 						<a href="/r/{sub}" class="rail-name">{sub}</a>
 					</li>
