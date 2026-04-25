@@ -35,9 +35,9 @@
 	{#if hasThumb}
 		<a class="thumb" href={post.permalink} aria-hidden="true" tabindex="-1">
 			{#if realThumb}
-				<span class="thumb-img" style:background-image="url({realThumb})"></span>
+				<img class="thumb-img" src={realThumb} alt="" loading="lazy" referrerpolicy="no-referrer" />
 			{:else}
-				<span class="thumb-img" style:background={fallbackBg}></span>
+				<span class="thumb-img thumb-fallback" style:background={fallbackBg}></span>
 			{/if}
 			{#if post.kind === 'video'}
 				<span class="play">▶</span>
@@ -137,14 +137,24 @@
 		position: relative;
 		align-self: stretch;
 		width: 88px;
-		aspect-ratio: 1 / 1;
+		min-height: 88px;
 		background: var(--paper-2);
 		overflow: hidden;
 		display: block;
+		flex-shrink: 0;
 	}
-	.thumb-img {
+	img.thumb-img {
 		position: absolute;
 		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+	span.thumb-img {
+		position: absolute;
+		inset: 0;
+		display: block;
 		background-size: cover;
 		background-position: center;
 	}
@@ -198,7 +208,7 @@
 		.entry {
 			gap: 12px;
 			padding: 6px 0 7px 18px;
-			grid-template-columns: 1fr auto;
+			grid-template-columns: 1fr 88px;
 		}
 		.entry:not(.no-thumb) {
 			padding-right: 0;
@@ -221,8 +231,8 @@
 		}
 		.title {
 			font-size: 15px;
-			line-height: 1.18;
-			margin-top: 1px;
+			line-height: 1.2;
+			margin-top: 2px;
 			text-wrap: pretty;
 			display: -webkit-box;
 			-webkit-line-clamp: 2;
@@ -231,10 +241,8 @@
 			overflow: hidden;
 		}
 		.thumb {
-			width: auto;
-			height: auto;
-			aspect-ratio: 1 / 1;
-			align-self: stretch;
+			width: 88px;
+			min-height: 88px;
 		}
 		.badge {
 			font-size: 7px;

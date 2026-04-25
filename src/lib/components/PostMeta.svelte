@@ -72,6 +72,7 @@
 
 	@media (max-width: 760px) {
 		.byline {
+			display: block;
 			margin-top: 2px;
 			font-size: 11px;
 			line-height: 1.2;
@@ -81,6 +82,10 @@
 		}
 		.sep {
 			margin: 0 6px;
+		}
+		.comments {
+			/* keep clickable but flow inline with the rest of the byline */
+			display: inline;
 		}
 	}
 </style>
