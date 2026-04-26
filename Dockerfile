@@ -1,7 +1,13 @@
 # syntax=docker/dockerfile:1.7
 
 # --- Build stage --------------------------------------------------------
-FROM node:22-alpine AS build
+# --platform=$BUILDPLATFORM keeps the build stage on the runner's native
+# architecture (linux/amd64 on GitHub Actions). Without it, multi-arch
+# builds emulate the build itself under QEMU, which crashes with
+# "Illegal instruction" the moment Node hits an instruction the QEMU
+# translator doesn't model. Galley's runtime deps are pure JS, so the
+# resulting node_modules/build directory is portable to arm64.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 
 RUN corepack enable
 WORKDIR /app
