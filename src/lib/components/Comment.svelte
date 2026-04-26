@@ -112,6 +112,7 @@
 					hide replies
 				</button>
 			{:else}
+				<div class="rail-collapsed" aria-hidden="true"></div>
 				<button type="button" class="show-replies" onclick={toggleReplies}>
 					show more replies
 				</button>
@@ -126,13 +127,21 @@
 		padding: 6px 0 4px 26px;
 	}
 
-	/* Vertical line on the left of comments with visible replies. Drawn on
-	   .content so it spans only the body + replies area — never past the
-	   show-replies / hide-replies button that sits below .content. */
+	/* Two rendering modes for the connecting rail:
+
+	   1. Replies expanded — children's own curves hook into the line, so the
+	      line just runs down through .content. Drawn as a 1px column.
+
+	   2. Replies collapsed — line and corner are ONE box: border-left for
+	      the vertical, border-bottom for the horizontal stub, and
+	      border-bottom-left-radius for the corner. Anchored from the top of
+	      .content down to just above the show-replies pill. By being a single
+	      element, the line and corner can't drift apart no matter what's in
+	      the body. */
 	.content {
 		position: relative;
 	}
-	.comment.has-replies:not(.collapsed) .content::before {
+	.comment.has-replies.replies-expanded:not(.collapsed) .content::before {
 		content: '';
 		position: absolute;
 		left: -18px;
@@ -140,6 +149,18 @@
 		bottom: 0;
 		width: 1px;
 		background: var(--rule);
+	}
+
+	.rail-collapsed {
+		position: absolute;
+		top: 26px;
+		left: 8px;
+		bottom: 30px;
+		width: 18px;
+		border-left: 1px solid var(--rule);
+		border-bottom: 1px solid var(--rule);
+		border-bottom-left-radius: 14px;
+		pointer-events: none;
 	}
 
 	/* Curve hooking back to the parent's vertical line on nested comments —
@@ -315,20 +336,6 @@
 	.show-replies:hover {
 		border-color: var(--ink-3);
 		color: var(--ink);
-	}
-	/* Curve on the show-replies button — picks up where .content's line ends.
-	   Sized so the corner lands a couple of pixels into the pill's rounded
-	   left edge rather than floating in the gap above it. */
-	.show-replies::before {
-		content: '';
-		position: absolute;
-		top: -12px;
-		left: -20px;
-		width: 20px;
-		height: 14px;
-		border-left: 1px solid var(--rule);
-		border-bottom: 1px solid var(--rule);
-		border-bottom-left-radius: 14px;
 	}
 
 	.hide-replies {
