@@ -38,69 +38,69 @@
 			loading = false;
 		}
 	}
+
+	const label = $derived.by(() => {
+		if (loading) return 'loading…';
+		if (error) return 'retry';
+		if (more.count <= 0) return 'continue thread';
+		return `load ${more.count} more ${more.count === 1 ? 'reply' : 'replies'}`;
+	});
 </script>
 
-{#if loading}
-	<p class="more loading" class:nested><em>Loading {more.count} {more.count === 1 ? 'reply' : 'replies'}…</em></p>
-{:else if error}
-	<p class="more error" class:nested>
-		<em>Couldn't load: {error}</em>
-		<button type="button" onclick={load}>Retry</button>
-	</p>
-{:else}
-	<p class="more" class:nested>
-		<button type="button" onclick={load}>
-			Load {more.count > 0 ? `${more.count} more ${more.count === 1 ? 'reply' : 'replies'}` : 'thread continuation'} ↓
-		</button>
-	</p>
-{/if}
+<button
+	type="button"
+	class="more-button"
+	class:nested
+	class:loading
+	class:error={!!error}
+	disabled={loading}
+	onclick={load}
+	title={error ?? undefined}
+>
+	{label}
+</button>
 
 <style>
-	.more {
+	.more-button {
 		position: relative;
+		display: block;
 		margin: 4px 0 4px 26px;
-		padding: 4px 0;
+		padding: 2px 10px;
+		background: var(--paper);
+		border: 1px solid var(--rule);
+		border-radius: 999px;
 		font-family: var(--sans);
-		font-size: 11px;
-		letter-spacing: 0.06em;
+		font-size: 9.5px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		cursor: pointer;
+	}
+	.more-button:hover:not(:disabled) {
+		border-color: var(--ink-3);
+		color: var(--ink);
+	}
+	.more-button:disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+	}
+	.more-button.error {
+		border-color: var(--accent-deep);
+		color: var(--accent-deep);
 	}
 
-	/* Curve hooking back to the parent's vertical line for nested placeholders */
-	.more.nested::before {
+	/* Single-element rail+corner for nested placeholders, mirroring the
+	   show-replies pill's connector. */
+	.more-button.nested::before {
 		content: '';
 		position: absolute;
-		top: 0;
+		top: -10px;
 		left: -18px;
 		width: 18px;
-		height: 14px;
-		background: var(--paper);
+		height: 20px;
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
 		border-bottom-left-radius: 14px;
-	}
-
-	button {
-		background: transparent;
-		border: none;
-		color: var(--accent);
-		font-family: inherit;
-		font-size: inherit;
-		letter-spacing: inherit;
-		padding: 0;
-		cursor: pointer;
-		text-decoration: underline;
-		text-underline-offset: 3px;
-	}
-	button:hover {
-		color: var(--accent-deep);
-	}
-	.loading {
-		color: var(--ink-3);
-	}
-	.error {
-		color: var(--accent-deep);
-	}
-	.error button {
-		margin-left: 8px;
+		pointer-events: none;
 	}
 </style>
