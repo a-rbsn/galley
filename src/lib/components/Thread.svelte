@@ -38,13 +38,16 @@
 	<h1 class="title">{post.title}</h1>
 
 	<div class="byline">
-		<span class="author">u/{post.author}</span>
-		<span class="sep">·</span>
-		<span class="pts"><span class="num">{formatScore(post.score)}</span> pts</span>
-		<span class="sep">·</span>
-		<span><span class="num">{formatCount(post.numComments)}</span> comments</span>
-		<span class="sep">·</span>
-		<span class="time">{relativeTime(post.createdUtc)}</span>
+		<div class="author-line">
+			<span class="author">u/{post.author}</span>
+		</div>
+		<div class="meta-line">
+			<span class="pts"><span class="num">{formatScore(post.score)}</span> pts</span>
+			<span class="sep">·</span>
+			<span><span class="num">{formatCount(post.numComments)}</span> comments</span>
+			<span class="sep">·</span>
+			<span class="time">{relativeTime(post.createdUtc)}</span>
+		</div>
 	</div>
 
 	{#if canPlayVideo}
@@ -138,7 +141,7 @@
 		letter-spacing: -0.014em;
 		font-variation-settings: 'opsz' 60;
 		margin: 0 0 12px;
-		text-wrap: pretty;
+		text-wrap: balance;
 		max-width: 32ch;
 	}
 
@@ -147,12 +150,17 @@
 		font-style: italic;
 		font-size: 14px;
 		color: var(--ink-3);
+		font-feature-settings: 'kern', 'liga', 'onum';
+		font-variant-numeric: oldstyle-nums;
+	}
+	.author-line {
+		margin-bottom: 2px;
+	}
+	.meta-line {
 		display: flex;
 		gap: 0;
 		align-items: baseline;
 		flex-wrap: wrap;
-		font-feature-settings: 'kern', 'liga', 'onum';
-		font-variant-numeric: oldstyle-nums;
 	}
 	.author {
 		color: var(--ink-2);

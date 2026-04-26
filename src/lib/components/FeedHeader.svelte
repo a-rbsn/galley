@@ -1,14 +1,18 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
+
 	let {
 		title,
 		count,
 		sort,
-		sortHref
+		sortHref,
+		titleAction
 	}: {
 		title?: string;
 		count?: number;
 		sort: 'hot' | 'new' | 'top' | 'rising';
 		sortHref: (s: 'hot' | 'new' | 'top' | 'rising') => string;
+		titleAction?: Snippet;
 	} = $props();
 	const sorts: Array<'hot' | 'new' | 'top' | 'rising'> = ['hot', 'new', 'top', 'rising'];
 </script>
@@ -21,6 +25,7 @@
 		{:else if title}
 			<em>{title}</em>
 		{/if}
+		{#if titleAction}{@render titleAction()}{/if}
 	</h2>
 	<nav class="feed-sort" aria-label="Sort">
 		{#each sorts as s (s)}
@@ -36,7 +41,7 @@
 		display: flex;
 		align-items: baseline;
 		justify-content: space-between;
-		padding-bottom: 14px;
+		padding: 14px 0;
 		border-bottom: 1px solid var(--rule);
 		gap: 18px;
 	}
@@ -83,7 +88,7 @@
 
 	@media (max-width: 760px) {
 		.feed-header {
-			padding: 6px var(--page-pad-x-mobile);
+			padding: 10px var(--page-pad-x-mobile) 6px;
 			background: var(--paper-2);
 			border-bottom: 1px solid var(--rule);
 			gap: 14px;

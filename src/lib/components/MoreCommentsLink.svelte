@@ -16,7 +16,6 @@
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 
-	const cleanParentId = $derived(more.parentId.replace(/^t[1-9]_/, ''));
 	const nested = $derived(more.depth > 0);
 
 	async function load() {
@@ -24,8 +23,18 @@
 		loading = true;
 		error = null;
 		try {
-			const url = `/api/expand?sub=${encodeURIComponent(sub)}&post=${encodeURIComponent(postId)}&parent=${encodeURIComponent(cleanParentId)}`;
-			const res = await fetch(url);
+			const params = new URLSearchParams({
+				sub,
+				post: postId,
+				parent: more.parentId
+			});
+			// Top-level "more" placeholders sit under the post (parent_id = t3_…),
+			// which Reddit's branch endpoint can't expand — we hit /api/morechildren
+			// instead, which needs the explicit child list.
+			if (more.parentId.startsWith('t3_') && more.children.length > 0) {
+				params.set('children', more.children.join(','));
+			}
+			const res = await fetch(`/api/expand?${params}`);
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = (await res.json()) as {
 				replies?: Array<CommentView | MoreCommentsView>;
@@ -64,7 +73,7 @@
 	.more-button {
 		position: relative;
 		display: block;
-		margin: 4px 0 4px 26px;
+		margin: 4px 0;
 		padding: 2px 10px;
 		background: var(--paper);
 		border: 1px solid var(--rule);
@@ -87,20 +96,5 @@
 	.more-button.error {
 		border-color: var(--accent-deep);
 		color: var(--accent-deep);
-	}
-
-	/* Single-element rail+corner for nested placeholders, mirroring the
-	   show-replies pill's connector. */
-	.more-button.nested::before {
-		content: '';
-		position: absolute;
-		top: -10px;
-		left: -18px;
-		width: 18px;
-		height: 20px;
-		border-left: 1px solid var(--rule);
-		border-bottom: 1px solid var(--rule);
-		border-bottom-left-radius: 14px;
-		pointer-events: none;
 	}
 </style>

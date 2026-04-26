@@ -26,14 +26,20 @@
 		</div>
 
 		<h2 class="title">
-			<a href={post.permalink}>{post.title}</a>
+			<a href={post.permalink} data-sveltekit-preload-data="hover">{post.title}</a>
 		</h2>
 
 		<PostMeta {post} />
 	</div>
 
 	{#if hasThumb}
-		<a class="thumb" href={post.permalink} aria-hidden="true" tabindex="-1">
+		<a
+			class="thumb"
+			href={post.permalink}
+			data-sveltekit-preload-data="hover"
+			aria-hidden="true"
+			tabindex="-1"
+		>
 			{#if realThumb}
 				<img class="thumb-img" src={realThumb} alt="" loading="lazy" referrerpolicy="no-referrer" />
 			{:else}
@@ -59,7 +65,7 @@
 		display: grid;
 		grid-template-columns: 1fr 72px;
 		gap: 22px;
-		padding: 14px 0 14px 14px;
+		padding: 0;
 		border-bottom: 1px solid var(--rule);
 		align-items: stretch;
 		position: relative;
@@ -74,6 +80,7 @@
 	.body {
 		min-width: 0;
 		align-self: center;
+		padding: 14px 0;
 	}
 
 	.kicker {
@@ -188,8 +195,8 @@
 	}
 	.duration {
 		position: absolute;
-		bottom: 3px;
-		right: 3px;
+		bottom: 0;
+		right: 0;
 		background: rgba(0, 0, 0, 0.7);
 		color: white;
 		font-family: var(--mono);
@@ -216,9 +223,8 @@
 			padding-top: 0;
 			padding-bottom: 0;
 		}
-		.entry:not(.no-thumb) .body {
-			padding-top: 6px;
-			padding-bottom: 7px;
+		.body {
+			padding: 0;
 		}
 		.entry.no-thumb {
 			padding-right: var(--page-pad-x-mobile);

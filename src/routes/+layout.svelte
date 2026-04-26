@@ -2,6 +2,7 @@
 	import '$lib/styles/tokens.css';
 	import '$lib/styles/reset.css';
 	import { onMount } from 'svelte';
+	import { page } from '$app/state';
 	import type { Snippet } from 'svelte';
 	import Masthead from '$lib/components/Masthead.svelte';
 	import SectionBar from '$lib/components/SectionBar.svelte';
@@ -12,8 +13,24 @@
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
+	// First-run setup is a chrome-less screen — none of the nav makes sense
+	// before there's a configured instance, and every link would just redirect
+	// back to /setup anyway.
+	const isSetup = $derived(page.url.pathname === '/setup');
+
 	onMount(() => {
 		hydrateSubs(data.subs);
+
+		const masthead = document.querySelector('.masthead');
+		if (!masthead) return;
+		const root = document.documentElement;
+		const update = () => {
+			root.style.setProperty('--masthead-h', `${masthead.getBoundingClientRect().height}px`);
+		};
+		update();
+		const ro = new ResizeObserver(update);
+		ro.observe(masthead);
+		return () => ro.disconnect();
 	});
 </script>
 
@@ -21,18 +38,26 @@
 	<title>Galley</title>
 </svelte:head>
 
-<Masthead />
-<SectionBar subs={data.subs} />
+{#if isSetup}
+	<main class="page setup-page">
+		<section class="content">
+			{@render children()}
+		</section>
+	</main>
+{:else}
+	<Masthead />
+	<SectionBar subs={data.subs} />
 
-<main class="page">
-	<SubList subs={data.subs} />
-	<section class="content">
-		{@render children()}
-	</section>
-	<div class="trail" aria-hidden="true"></div>
-</main>
+	<main class="page">
+		<SubList subs={data.subs} />
+		<section class="content">
+			{@render children()}
+		</section>
+		<div class="trail" aria-hidden="true"></div>
+	</main>
 
-<Colophon />
+	<Colophon />
+{/if}
 
 <style>
 	.page {
@@ -45,6 +70,9 @@
 	}
 	.content {
 		min-width: 0;
+	}
+	.page.setup-page {
+		grid-template-columns: minmax(0, 1fr);
 	}
 
 	@media (max-width: 1040px) {

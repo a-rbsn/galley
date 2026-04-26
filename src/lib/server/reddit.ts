@@ -5,19 +5,98 @@
  * that needs Reddit data should call this from a +page.server.ts /
  * +server.ts module so requests stay server-side and the cache is
  * shared across pages.
+ *
+ * The cache is stale-while-revalidate: within `ttl` we serve cached
+ * values directly; past `ttl` but inside `swr` we serve the stale value
+ * immediately and kick off a background refresh; past `ttl + swr` we
+ * fetch fresh and block. Survives restarts via a JSON file on disk.
  */
 
 import { env } from '$env/dynamic/private';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { getRedditUsername } from './config';
 import type { CommentView, MoreCommentsView, PostKind, PostView } from '$lib/types';
 
-const DEFAULT_USER_AGENT = 'web:io.galley.app:v0.1.0 (by /u/PLACEHOLDER)';
+const FALLBACK_USER_AGENT = 'web:io.galley.app:v0.1.0 (self-hosted)';
+const FETCH_TIMEOUT_MS = 8000;
 
-const cache = new Map<string, { at: number; data: unknown }>();
-const MAX_CACHE_ENTRIES = 200;
+/**
+ * Build the User-Agent string Reddit's API rules expect. Priority:
+ *   1. REDDIT_USER_AGENT env var (Docker/CI installs that bring their own)
+ *   2. Username from .galley-config.json (set via the /setup flow)
+ *   3. Generic fallback — works, but groups all unconfigured instances into
+ *      one shared rate-limit bucket. The /setup screen exists to avoid this.
+ */
+function buildUserAgent(): string {
+	if (env.REDDIT_USER_AGENT) return env.REDDIT_USER_AGENT;
+	const username = getRedditUsername();
+	if (username) return `web:io.galley.app:v0.1.0 (by /u/${username})`;
+	return FALLBACK_USER_AGENT;
+}
+const MAX_CACHE_ENTRIES = 500;
+const PERSIST_DEBOUNCE_MS = 1000;
+
+type CacheEntry = { at: number; data: unknown };
+const cache = new Map<string, CacheEntry>();
+const inflight = new Map<string, Promise<unknown>>();
+
+const CACHE_PATH = resolveCachePath();
+
+function resolveCachePath(): string | null {
+	const override = env.GALLEY_CACHE_PATH;
+	if (override === 'none' || env.GALLEY_CACHE_DISABLE === '1') return null;
+	return override ? resolve(override) : resolve('.galley-cache.json');
+}
+
+let persistDisabled = false;
+let persistTimer: ReturnType<typeof setTimeout> | null = null;
+
+function loadCacheFromDisk() {
+	if (!CACHE_PATH || !existsSync(CACHE_PATH)) return;
+	try {
+		const raw = readFileSync(CACHE_PATH, 'utf8');
+		const parsed = JSON.parse(raw) as Array<[string, CacheEntry]>;
+		if (!Array.isArray(parsed)) return;
+		for (const [k, v] of parsed) {
+			if (typeof k === 'string' && v && typeof v.at === 'number') cache.set(k, v);
+		}
+	} catch {
+		// Corrupt cache file — ignore, we'll rewrite on next persist.
+	}
+}
+
+function schedulePersist() {
+	if (!CACHE_PATH || persistDisabled) return;
+	if (persistTimer) return;
+	persistTimer = setTimeout(() => {
+		persistTimer = null;
+		try {
+			const dir = dirname(CACHE_PATH);
+			if (dir && dir !== '.' && !existsSync(dir)) mkdirSync(dir, { recursive: true });
+			writeFileSync(CACHE_PATH, JSON.stringify([...cache]));
+		} catch {
+			// Probably read-only filesystem (some serverless hosts). Stop trying.
+			persistDisabled = true;
+		}
+	}, PERSIST_DEBOUNCE_MS);
+}
+
+loadCacheFromDisk();
 
 export interface FetchOptions {
-	ttl?: number; // seconds — default 60
-	signal?: AbortSignal;
+	/**
+	 * Cache freshness, in seconds. Within this window the cached value is
+	 * served directly without a network call. Default: 60.
+	 */
+	ttl?: number;
+	/**
+	 * How long past `ttl` we'll still serve a stale cached value while a
+	 * background refresh runs. Default: 1800 (30 minutes).
+	 */
+	swr?: number;
+	/** Skip cache lookup for this call (used by background revalidation). */
+	skipCache?: boolean;
 }
 
 export class RedditError extends Error {
@@ -36,9 +115,11 @@ function buildUrl(path: string): string {
 	const p = path.startsWith('/') ? path : '/' + path;
 	const qIdx = p.indexOf('?');
 	let pathPart = qIdx >= 0 ? p.slice(0, qIdx) : p;
-	let queryPart = qIdx >= 0 ? p.slice(qIdx + 1) : '';
+	const queryPart = qIdx >= 0 ? p.slice(qIdx + 1) : '';
 
-	if (!/\.json$/.test(pathPart)) {
+	// /api/* endpoints (e.g. morechildren, autocomplete) shouldn't get a
+	// .json suffix — only listing-style paths.
+	if (!/\.json$/.test(pathPart) && !pathPart.startsWith('/api/')) {
 		pathPart = pathPart.replace(/\/$/, '') + '.json';
 	}
 	const params = new URLSearchParams(queryPart);
@@ -53,6 +134,61 @@ function setCache(key: string, data: unknown) {
 		const oldest = cache.keys().next().value;
 		if (oldest !== undefined) cache.delete(oldest);
 	}
+	schedulePersist();
+}
+
+async function fetchFresh<T>(url: string): Promise<T> {
+	const existing = inflight.get(url) as Promise<T> | undefined;
+	if (existing) return existing;
+
+	const userAgent = buildUserAgent();
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+	const promise = (async () => {
+		try {
+			const res = await fetch(url, {
+				headers: { 'User-Agent': userAgent, Accept: 'application/json' },
+				signal: controller.signal
+			});
+			if (res.status === 429) {
+				const retryHeader = res.headers.get('Retry-After');
+				const retryAfter = retryHeader ? Number(retryHeader) : undefined;
+				throw new RedditError(
+					`Reddit rate-limited the request${retryAfter ? ` (retry after ${retryAfter}s)` : ''}`,
+					429,
+					retryAfter
+				);
+			}
+			if (!res.ok) {
+				throw new RedditError(
+					`Reddit responded ${res.status} ${res.statusText}`,
+					res.status
+				);
+			}
+			const data = (await res.json()) as T;
+			setCache(url, data);
+			return data;
+		} catch (e) {
+			if (e instanceof Error && e.name === 'AbortError') {
+				throw new RedditError(`Reddit request timed out after ${FETCH_TIMEOUT_MS}ms`, 504);
+			}
+			throw e;
+		} finally {
+			clearTimeout(timeoutId);
+			inflight.delete(url);
+		}
+	})();
+
+	inflight.set(url, promise);
+	return promise;
+}
+
+function revalidate(url: string) {
+	if (inflight.has(url)) return;
+	void fetchFresh(url).catch(() => {
+		// Background refresh failures are silent — caller already got stale data.
+	});
 }
 
 export async function redditJson<T = unknown>(
@@ -60,41 +196,59 @@ export async function redditJson<T = unknown>(
 	opts: FetchOptions = {}
 ): Promise<T> {
 	const ttl = opts.ttl ?? 60;
+	const swr = opts.swr ?? 1800;
 	const url = buildUrl(path);
 
-	const cached = cache.get(url);
-	if (cached && (Date.now() - cached.at) / 1000 < ttl) {
-		return cached.data as T;
+	if (!opts.skipCache) {
+		const cached = cache.get(url);
+		if (cached) {
+			const ageSec = (Date.now() - cached.at) / 1000;
+			if (ageSec < ttl) return cached.data as T;
+			if (ageSec < ttl + swr) {
+				revalidate(url);
+				return cached.data as T;
+			}
+		}
 	}
 
-	const userAgent = env.REDDIT_USER_AGENT || DEFAULT_USER_AGENT;
-	const res = await fetch(url, {
-		headers: {
-			'User-Agent': userAgent,
-			Accept: 'application/json'
-		},
-		signal: opts.signal
-	});
+	return fetchFresh<T>(url);
+}
 
-	if (res.status === 429) {
-		const retryHeader = res.headers.get('Retry-After');
-		const retryAfter = retryHeader ? Number(retryHeader) : undefined;
-		throw new RedditError(
-			`Reddit rate-limited the request${retryAfter ? ` (retry after ${retryAfter}s)` : ''}`,
-			429,
-			retryAfter
-		);
-	}
-	if (!res.ok) {
-		throw new RedditError(
-			`Reddit responded ${res.status} ${res.statusText} for ${path}`,
-			res.status
-		);
-	}
+/**
+ * Reddit's `/api/morechildren` endpoint. Used to expand a top-level "load
+ * more" placeholder — the branch endpoint (`/r/<sub>/comments/<id>/_/<cid>`)
+ * only works when the parent is a real comment, not the post itself.
+ *
+ * Returns a flat list of t1/more things; callers reassemble the tree via
+ * `parent_id`. Reddit caps each call at ~100 child IDs, so we batch.
+ */
+interface MoreChildrenResp {
+	json?: {
+		errors?: unknown[];
+		data?: {
+			things?: Array<RawComment | RawMore>;
+		};
+	};
+}
 
-	const data = (await res.json()) as T;
-	setCache(url, data);
-	return data;
+export async function redditMoreChildren(
+	linkId: string,
+	children: string[],
+	opts: FetchOptions = {}
+): Promise<Array<RawComment | RawMore>> {
+	if (children.length === 0) return [];
+	const out: Array<RawComment | RawMore> = [];
+	const BATCH = 100;
+	for (let i = 0; i < children.length; i += BATCH) {
+		const batch = children.slice(i, i + BATCH);
+		const path = `/api/morechildren?api_type=json&link_id=${encodeURIComponent(
+			linkId
+		)}&children=${batch.join(',')}&limit_children=false`;
+		const resp = await redditJson<MoreChildrenResp>(path, opts);
+		const things = resp?.json?.data?.things ?? [];
+		out.push(...things);
+	}
+	return out;
 }
 
 /* --------------------------------------------------------------------- *
@@ -192,6 +346,14 @@ export interface RawCommentData {
 	stickied?: boolean;
 	is_submitter?: boolean;
 	distinguished?: 'moderator' | 'admin' | null;
+	media_metadata?: Record<
+		string,
+		{
+			e?: string;
+			m?: string;
+			s?: { u?: string; gif?: string; mp4?: string; x?: number; y?: number };
+		}
+	>;
 	replies?: Listing<RawComment | RawMore> | '' | null;
 }
 
@@ -341,6 +503,39 @@ export function rawPostToView(post: RawPost): PostView {
 	};
 }
 
+/**
+ * Reddit encodes inline media (gifs, image emotes) in comment markdown as
+ * `![alt](media_id)` where media_id is a key into media_metadata. Without
+ * substitution the markdown renderer emits an <img> with a non-http src,
+ * which our sanitiser strips — leaving the alt text ("gif") with broken-image
+ * styling. Resolve the ref to the real media URL up front so the gif renders.
+ *
+ * Two ref shapes need handling:
+ *   1. media_metadata-resolvable refs (Reddit-hosted media). When the entry
+ *      has a valid `s` block we use its gif/u/mp4 URL.
+ *   2. `giphy|<id>[|...]` refs. Reddit often returns status: "invalid" for
+ *      these (no `s` block), but the id alone is enough to build a working
+ *      i.giphy.com URL — so we always rewrite giphy refs.
+ */
+function resolveInlineMedia(
+	body: string,
+	metadata: RawCommentData['media_metadata']
+): string {
+	if (!body) return body;
+	return body.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (match, alt, ref) => {
+		const m = metadata?.[ref];
+		const metaUrl = (m?.s?.gif ?? m?.s?.u ?? m?.s?.mp4 ?? '').replace(/&amp;/g, '&');
+		if (metaUrl && /^https?:\/\//.test(metaUrl)) {
+			return `![${alt}](${metaUrl})`;
+		}
+		const giphy = /^giphy\|([A-Za-z0-9]+)/.exec(ref);
+		if (giphy) {
+			return `![${alt}](https://i.giphy.com/media/${giphy[1]}/giphy.gif)`;
+		}
+		return match;
+	});
+}
+
 export function rawCommentToView(c: RawComment): CommentView {
 	const d = c.data;
 	const replies =
@@ -357,7 +552,7 @@ export function rawCommentToView(c: RawComment): CommentView {
 	return {
 		id: d.id,
 		author: d.author,
-		body: d.body,
+		body: resolveInlineMedia(d.body, d.media_metadata),
 		bodyHtml: d.body_html,
 		score: d.score,
 		createdUtc: d.created_utc,
@@ -385,4 +580,5 @@ export function rawMoreToView(m: RawMore): MoreCommentsView {
  */
 export function _clearCache() {
 	cache.clear();
+	inflight.clear();
 }

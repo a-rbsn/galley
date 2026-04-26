@@ -41,7 +41,7 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 
 	const settled = await Promise.allSettled(
 		subs.map((s) =>
-			redditJson<Listing<RawPost>>(`/r/${s}/${sort}?limit=25`, { ttl: 60 })
+			redditJson<Listing<RawPost>>(`/r/${s}/${sort}?limit=25`, { ttl: 300 })
 		)
 	);
 

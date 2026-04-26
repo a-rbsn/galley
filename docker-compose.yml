@@ -1,0 +1,15 @@
+services:
+  galley:
+    image: ghcr.io/a-rbsn/galley:latest
+    container_name: galley
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # Persistent storage for the instance config (Reddit username) and
+      # the on-disk Reddit response cache. Survives container restarts.
+      - ./data:/data
+    # Optional: pin a specific User-Agent instead of going through the
+    # /setup screen on first launch. The screen still works without this.
+    # environment:
+    #   REDDIT_USER_AGENT: "web:io.galley.app:v0.1.0 (by /u/your-name)"

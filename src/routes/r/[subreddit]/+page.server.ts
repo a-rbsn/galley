@@ -30,7 +30,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const path = `/r/${sub.toLowerCase()}/${sort}?${qs}`;
 
 	try {
-		const data = await redditJson<Listing<RawPost>>(path, { ttl: 60 });
+		const data = await redditJson<Listing<RawPost>>(path, { ttl: 300 });
 		const posts = data.data.children
 			.filter((c): c is RawPost => c.kind === 't3')
 			.map(rawPostToView);

@@ -27,7 +27,7 @@
 		border-bottom: 1px solid var(--rule);
 		background: var(--paper);
 		position: sticky;
-		top: 59px;
+		top: var(--masthead-h, 59px);
 		z-index: 25;
 	}
 	.sectionbar-inner {
@@ -70,7 +70,7 @@
 
 	@media (max-width: 760px) {
 		.sectionbar {
-			top: 43px;
+			top: var(--masthead-h, 45px);
 		}
 		.sectionbar-inner {
 			padding: 4px var(--page-pad-x-mobile);

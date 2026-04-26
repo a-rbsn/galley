@@ -12,7 +12,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			`/api/subreddit_autocomplete_v2?query=${encodeURIComponent(
 				q
 			)}&include_over_18=false&include_profiles=false&typeahead_active=true&limit=10`,
-			{ ttl: 30 }
+			{ ttl: 600 }
 		);
 
 		const results = data.data.children

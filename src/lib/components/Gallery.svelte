@@ -98,16 +98,6 @@
 	</div>
 
 	<div class="controls" aria-label="Gallery controls">
-		<button
-			type="button"
-			class="nav prev"
-			onclick={prev}
-			disabled={current === 0}
-			aria-label="Previous image"
-		>
-			←
-		</button>
-
 		<div class="dots" aria-hidden="true">
 			{#each items as item, i (item.url)}
 				<button
@@ -123,20 +113,6 @@
 				></button>
 			{/each}
 		</div>
-
-		<span class="counter" aria-live="polite">
-			{String(current + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
-		</span>
-
-		<button
-			type="button"
-			class="nav next"
-			onclick={next}
-			disabled={current === total - 1}
-			aria-label="Next image"
-		>
-			→
-		</button>
 	</div>
 
 	{#if currentCaption}
@@ -193,32 +169,9 @@
 	}
 
 	.controls {
-		display: grid;
-		grid-template-columns: 36px 1fr auto 36px;
-		align-items: center;
-		gap: 14px;
+		display: flex;
+		justify-content: center;
 		padding-top: 10px;
-	}
-
-	.nav {
-		background: transparent;
-		border: 1px solid var(--rule-strong);
-		color: var(--ink-2);
-		width: 36px;
-		height: 36px;
-		font-family: var(--serif);
-		font-size: 16px;
-		line-height: 1;
-		cursor: pointer;
-		padding: 0;
-	}
-	.nav:hover:not(:disabled) {
-		border-color: var(--ink);
-		color: var(--ink);
-	}
-	.nav:disabled {
-		opacity: 0.25;
-		cursor: not-allowed;
 	}
 
 	.dots {
@@ -247,15 +200,6 @@
 		border-color: var(--accent);
 	}
 
-	.counter {
-		font-family: var(--mono);
-		font-size: 11px;
-		color: var(--ink-3);
-		letter-spacing: 0.04em;
-		font-variant-numeric: tabular-nums;
-		white-space: nowrap;
-	}
-
 	.caption {
 		margin: 10px 0 0;
 		font-family: var(--serif);
@@ -271,13 +215,7 @@
 
 	@media (max-width: 760px) {
 		.controls {
-			grid-template-columns: 32px 1fr auto 32px;
 			gap: 10px;
-		}
-		.nav {
-			width: 32px;
-			height: 32px;
-			font-size: 14px;
 		}
 		.dots {
 			gap: 5px;

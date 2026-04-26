@@ -72,7 +72,6 @@
 <style>
 	.home {
 		border-top: 3px double var(--ink);
-		padding-top: 28px;
 	}
 	.onboarding {
 		max-width: 60ch;

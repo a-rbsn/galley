@@ -181,9 +181,6 @@
 		border-bottom-left-radius: 14px;
 	}
 
-	.comment.stickied {
-		background: linear-gradient(to right, var(--accent-soft), transparent 200px);
-	}
 
 	.byline {
 		font-family: var(--serif);
@@ -239,12 +236,17 @@
 		color: var(--ink-4);
 	}
 	.pinned {
-		color: var(--accent);
+		display: inline-block;
+		background: var(--accent);
+		color: var(--paper);
 		font-family: var(--sans);
 		font-style: normal;
 		text-transform: uppercase;
-		font-size: 10px;
-		letter-spacing: 0.14em;
+		font-size: 9px;
+		letter-spacing: 0.18em;
+		font-weight: 600;
+		padding: 2px 6px;
+		border-radius: 2px;
 	}
 
 	.body {
@@ -340,19 +342,34 @@
 
 	.hide-replies {
 		position: relative;
+		display: block;
 		margin: 6px 0 4px;
-		padding: 4px 0;
-		background: transparent;
-		border: none;
+		padding: 2px 10px;
+		background: var(--paper);
+		border: 1px solid var(--rule);
+		border-radius: 999px;
 		font-family: var(--sans);
-		font-size: 10px;
+		font-size: 9.5px;
 		letter-spacing: 0.16em;
 		text-transform: uppercase;
 		color: var(--ink-3);
 		cursor: pointer;
 	}
 	.hide-replies:hover {
+		border-color: var(--ink-3);
 		color: var(--ink);
+	}
+	.hide-replies::before {
+		content: '';
+		position: absolute;
+		top: -10px;
+		left: -19px;
+		width: 18px;
+		height: 20px;
+		border-left: 1px solid var(--rule);
+		border-bottom: 1px solid var(--rule);
+		border-bottom-left-radius: 14px;
+		pointer-events: none;
 	}
 
 

@@ -78,6 +78,63 @@ The public JSON endpoints provide everything Galley needs to read
 Reddit; running on Devvit would constrain that without expanding what
 the project does.
 
+## Self-hosting
+
+Galley is designed to be run as a personal instance. The recommended
+way is Docker — a prebuilt image is published to GitHub Container
+Registry on every release.
+
+### Quick start (docker compose)
+
+```yaml
+# docker-compose.yml
+services:
+  galley:
+    image: ghcr.io/a-rbsn/galley:latest
+    container_name: galley
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+```
+
+```
+docker compose up -d
+```
+
+Then open <http://localhost:3000>. On first launch the app shows a
+short setup screen that asks for your Reddit username — Reddit's API
+rules require each client to send a descriptive `User-Agent`, and
+storing your username per-instance keeps your traffic in its own
+rate-limit bucket instead of sharing one with every other self-hoster.
+The `./data` volume persists that config along with the on-disk
+response cache.
+
+### One-shot docker run
+
+```
+docker run -d \
+  --name galley \
+  -p 3000:3000 \
+  -v $(pwd)/data:/data \
+  --restart unless-stopped \
+  ghcr.io/a-rbsn/galley:latest
+```
+
+### Environment variables
+
+All optional. The setup screen handles everything for a normal
+install.
+
+| Variable                | Default                | Purpose                                                                                           |
+| ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------- |
+| `REDDIT_USER_AGENT`     | _(unset)_              | Pin the User-Agent string instead of letting the setup screen build one. Skips the setup screen.  |
+| `GALLEY_CONFIG_PATH`    | `/data/config.json`    | Where to store the configured Reddit username. Set to `none` to disable persistence.              |
+| `GALLEY_CACHE_PATH`     | `/data/cache.json`     | Where to store the on-disk Reddit response cache. Set to `none` to disable persistence.           |
+| `GALLEY_CACHE_DISABLE`  | _(unset)_              | Set to `1` to disable cache persistence entirely.                                                 |
+| `HOST` / `PORT`         | `0.0.0.0` / `3000`     | Standard adapter-node knobs.                                                                      |
+
 ## Local development
 
 Requirements:
@@ -85,25 +142,14 @@ Requirements:
 - Node.js 20 or newer
 - [pnpm](https://pnpm.io)
 
-Reddit asks that all clients send a descriptive `User-Agent` header
-that identifies the application and its maintainer. Set it before
-running the app:
-
-```
-# .env
-REDDIT_USER_AGENT=web:io.galley.app:v0.1.0 (by /u/your-username)
-```
-
-Then:
-
 ```
 pnpm install
 pnpm dev
 ```
 
-The app runs at <http://localhost:5173>. On first visit, the home page
-is empty until you add a few subreddits from the settings page — see
-*Subreddit list* above.
+The app runs at <http://localhost:5173>. On first visit it shows the
+setup screen (Reddit username + a starter set of subreddits); from
+then on the home page is the merged feed of those subreddits.
 
 ## Licence
 

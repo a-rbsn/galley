@@ -1,6 +1,7 @@
 import { json, error, type RequestHandler } from '@sveltejs/kit';
 import {
 	redditJson,
+	redditMoreChildren,
 	rawCommentToView,
 	rawMoreToView,
 	RedditError,
@@ -19,42 +20,105 @@ function annotateMarkdown(c: CommentView) {
 	}
 }
 
+/**
+ * Reassemble a flat morechildren response into a tree. The endpoint returns
+ * a flat array of t1/more things; a comment's parent is identified by its
+ * `parent_id`. Top-level results are the children of the post itself.
+ */
+function buildTreeFromFlat(
+	things: Array<RawComment | RawMore>
+): Array<CommentView | MoreCommentsView> {
+	const rawByName = new Map<string, RawComment>();
+	for (const t of things) {
+		if (t.kind === 't1') rawByName.set(t.data.name, t);
+	}
+
+	const viewByName = new Map<string, CommentView>();
+	const top: Array<CommentView | MoreCommentsView> = [];
+
+	for (const t of things) {
+		let view: CommentView | MoreCommentsView;
+		if (t.kind === 't1') {
+			// Strip nested replies — morechildren never inlines them; we attach
+			// children below by walking parent_id.
+			const stripped: RawComment = { ...t, data: { ...t.data, replies: '' } };
+			const cv = rawCommentToView(stripped);
+			viewByName.set(t.data.name, cv);
+			view = cv;
+		} else {
+			view = rawMoreToView(t);
+		}
+		const parentRaw = rawByName.get(t.data.parent_id);
+		if (parentRaw) {
+			const parentView = viewByName.get(parentRaw.data.name);
+			if (parentView) parentView.replies.push(view);
+		} else {
+			top.push(view);
+		}
+	}
+
+	return top;
+}
+
 export const GET: RequestHandler = async ({ url }) => {
 	const sub = (url.searchParams.get('sub') ?? '').toLowerCase();
 	const postId = (url.searchParams.get('post') ?? '').toLowerCase();
-	const parentId = (url.searchParams.get('parent') ?? '').toLowerCase();
+	const parent = url.searchParams.get('parent') ?? '';
 
 	if (!/^[a-z0-9_]{2,21}$/.test(sub)) error(400, 'invalid sub');
 	if (!/^[a-z0-9]{1,12}$/.test(postId)) error(400, 'invalid post id');
-	if (!/^[a-z0-9]{1,12}$/.test(parentId)) error(400, 'invalid parent id');
 
-	type Resp = [Listing<RawPost>, Listing<RawComment | RawMore>];
+	const parentMatch = /^(t[1-6])_([a-z0-9]{1,12})$/.exec(parent);
+	if (!parentMatch) error(400, 'invalid parent');
+	const parentKind = parentMatch[1];
+	const parentRawId = parentMatch[2];
 
 	try {
-		const result = await redditJson<Resp>(`/r/${sub}/comments/${postId}/_/${parentId}`, {
-			ttl: 30
-		});
-		const things = result[1]?.data?.children ?? [];
-
-		// The branch endpoint returns the parent comment with its replies. We
-		// surface the parent's replies directly — that's what replaces the
-		// "load more" placeholder. If the parent itself isn't there (rare),
-		// fall back to whatever the listing gave us.
 		let replies: Array<CommentView | MoreCommentsView>;
-		const top = things[0];
-		if (top?.kind === 't1') {
-			const view = rawCommentToView(top);
-			annotateMarkdown(view);
-			replies = view.replies;
+
+		if (parentKind === 't3') {
+			// Top-level "more": the placeholder hangs off the post itself, so
+			// Reddit's branch endpoint can't help — use morechildren with the
+			// explicit child list the client passed through.
+			const childrenParam = url.searchParams.get('children') ?? '';
+			const children = childrenParam
+				.split(',')
+				.map((s) => s.trim())
+				.filter((s) => /^[a-z0-9]{1,12}$/.test(s));
+			if (children.length === 0) {
+				return json({ replies: [] });
+			}
+			const things = await redditMoreChildren(`t3_${postId}`, children, { ttl: 60 });
+			replies = buildTreeFromFlat(things);
+			for (const r of replies) {
+				if (r.kind === 't1') annotateMarkdown(r);
+			}
+		} else if (parentKind === 't1') {
+			// Nested "more" (or "continue thread"): the branch endpoint returns
+			// the parent comment with its full reply subtree expanded.
+			type Resp = [Listing<RawPost>, Listing<RawComment | RawMore>];
+			const result = await redditJson<Resp>(
+				`/r/${sub}/comments/${postId}/_/${parentRawId}`,
+				{ ttl: 60 }
+			);
+			const things = result[1]?.data?.children ?? [];
+			const top = things[0];
+			if (top?.kind === 't1') {
+				const view = rawCommentToView(top);
+				annotateMarkdown(view);
+				replies = view.replies;
+			} else {
+				replies = things.map((t) => {
+					if (t.kind === 't1') {
+						const v = rawCommentToView(t);
+						annotateMarkdown(v);
+						return v;
+					}
+					return rawMoreToView(t as RawMore);
+				});
+			}
 		} else {
-			replies = things.map((t) => {
-				if (t.kind === 't1') {
-					const v = rawCommentToView(t);
-					annotateMarkdown(v);
-					return v;
-				}
-				return rawMoreToView(t as RawMore);
-			});
+			error(400, 'unsupported parent kind');
 		}
 
 		return json({ replies });

@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import PostListItem from '$lib/components/PostListItem.svelte';
 	import FeedHeader from '$lib/components/FeedHeader.svelte';
+	import { addSub, subsState } from '$lib/stores/subs.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -20,6 +21,11 @@
 		u.searchParams.set('after', data.after);
 		return u.pathname + (u.search || '');
 	});
+
+	const inFeed = $derived(subsState.list.includes(data.sub));
+	// Suppress the button until the client store has hydrated, otherwise SSR
+	// would render "add" for users who already have the sub saved.
+	const showAdd = $derived(subsState.hydrated && !inFeed);
 </script>
 
 <svelte:head>
@@ -27,7 +33,33 @@
 </svelte:head>
 
 <section class="feed">
-	<FeedHeader title="r/{data.sub}" sort={data.sort} {sortHref} />
+	<FeedHeader title="r/{data.sub}" sort={data.sort} {sortHref}>
+		{#snippet titleAction()}
+			{#if showAdd}
+				<button
+					type="button"
+					class="add-button"
+					title="Add r/{data.sub} to feed"
+					aria-label="Add r/{data.sub} to feed"
+					onclick={() => addSub(data.sub)}
+				>
+					<svg
+						viewBox="0 0 24 24"
+						width="12"
+						height="12"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="1.75"
+						stroke-linecap="round"
+						aria-hidden="true"
+					>
+						<line x1="12" y1="5" x2="12" y2="19" />
+						<line x1="5" y1="12" x2="19" y2="12" />
+					</svg>
+				</button>
+			{/if}
+		{/snippet}
+	</FeedHeader>
 
 	{#if data.posts.length === 0}
 		<p class="empty">
@@ -49,6 +81,28 @@
 <style>
 	.feed {
 		border-top: 3px double var(--ink);
+	}
+	.add-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		margin-left: 10px;
+		width: 22px;
+		height: 22px;
+		padding: 0;
+		background: var(--paper);
+		border: 1px solid var(--rule);
+		border-radius: 50%;
+		color: var(--ink-3);
+		cursor: pointer;
+		vertical-align: middle;
+	}
+	.add-button svg {
+		display: block;
+	}
+	.add-button:hover {
+		border-color: var(--accent);
+		color: var(--accent);
 	}
 	.empty {
 		font-family: var(--serif);

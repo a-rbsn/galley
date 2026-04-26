@@ -88,6 +88,17 @@ export function moveSub(name: string, dir: -1 | 1) {
 	writeStorage(subsState.list);
 }
 
+export function reorderSub(from: number, to: number) {
+	if (from === to) return;
+	if (from < 0 || from >= subsState.list.length) return;
+	if (to < 0 || to >= subsState.list.length) return;
+	const list = [...subsState.list];
+	const [item] = list.splice(from, 1);
+	list.splice(to, 0, item);
+	subsState.list = list;
+	writeStorage(subsState.list);
+}
+
 export function hasSubs(): boolean {
 	return subsState.list.length > 0;
 }

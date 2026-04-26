@@ -20,6 +20,7 @@
 	let videoEl: HTMLVideoElement | undefined = $state();
 	let teardown: (() => void) | undefined;
 	let mode: 'native-hls' | 'hls.js' | 'mp4' | 'none' = $state('none');
+	let paused = $state(true);
 
 	async function attach() {
 		if (!videoEl) return;
@@ -66,9 +67,15 @@
 	});
 
 	const aspect = $derived(width && height && height > 0 ? width / height : null);
+
+	function togglePlay() {
+		if (!videoEl) return;
+		if (videoEl.paused || videoEl.ended) void videoEl.play();
+		else videoEl.pause();
+	}
 </script>
 
-<div class="player">
+<div class="player" class:paused>
 	<video
 		bind:this={videoEl}
 		controls={!isGif}
@@ -79,7 +86,21 @@
 		preload="metadata"
 		{poster}
 		style:aspect-ratio={aspect ?? '16 / 9'}
+		onclick={togglePlay}
+		onplay={() => (paused = false)}
+		onpause={() => (paused = true)}
 	></video>
+	{#if !isGif}
+		<button
+			type="button"
+			class="tap-to-play"
+			aria-label="Play video"
+			tabindex="-1"
+			onclick={togglePlay}
+		>
+			<span class="play-icon" aria-hidden="true">▶</span>
+		</button>
+	{/if}
 	{#if mode === 'mp4' && !isGif}
 		<p class="note">
 			<em>Inline playback is video-only. <a href={src} target="_blank" rel="noopener noreferrer"
@@ -91,6 +112,7 @@
 
 <style>
 	.player {
+		position: relative;
 		margin-top: 20px;
 	}
 	video {
@@ -99,6 +121,37 @@
 		max-height: 78vh;
 		background: var(--ink);
 		object-fit: contain;
+		cursor: pointer;
+	}
+	.tap-to-play {
+		position: absolute;
+		inset: 0 0 44px 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		border: 0;
+		padding: 0;
+		cursor: pointer;
+		pointer-events: none;
+		opacity: 0;
+		transition: opacity 0.15s ease;
+	}
+	.player.paused .tap-to-play {
+		pointer-events: auto;
+		opacity: 1;
+	}
+	.play-icon {
+		width: 64px;
+		height: 64px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: rgba(0, 0, 0, 0.55);
+		color: var(--paper);
+		font-size: 24px;
+		padding-left: 4px;
+		border-radius: 50%;
 	}
 	.note {
 		font-family: var(--serif);

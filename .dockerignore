@@ -1,0 +1,12 @@
+node_modules
+.svelte-kit
+build
+.git
+.github
+.galley-cache.json
+.galley-config.json
+.env
+.env.*
+.DS_Store
+*.log
+mock

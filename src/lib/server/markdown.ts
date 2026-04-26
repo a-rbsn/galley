@@ -75,12 +75,28 @@ marked.setOptions({ gfm: true, breaks: false });
 const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)$/i;
 
 /**
- * Convert paragraphs that consist solely of a link to a direct image into
- * an embedded image preview. Inline image URLs inside prose stay as links —
- * we don't want to disrupt sentence flow.
+ * Convert paragraphs that consist solely of a link to a direct image — or a
+ * standalone <img> from markdown's ![alt](url) syntax (used for embedded
+ * gifs) — into an embedded image preview. Inline image URLs inside prose
+ * stay as links: we don't want to disrupt sentence flow.
  */
 function autoEmbedImages(html: string): string {
-	return html.replace(
+	const wrapped = html.replace(
+		/<p>\s*(<img\s[^>]*?\/?>)\s*<\/p>/gi,
+		(match, imgTag) => {
+			const srcMatch = /\bsrc="([^"]+)"/i.exec(imgTag);
+			const src = srcMatch?.[1];
+			if (!src || !/^https?:\/\//i.test(src)) return match;
+			return (
+				`<figure class="image-embed">` +
+				`<a href="${src}" target="_blank" rel="noopener noreferrer">` +
+				imgTag +
+				`</a>` +
+				`</figure>`
+			);
+		}
+	);
+	return wrapped.replace(
 		/<p>\s*<a\s+([^>]*?)href="([^"]+)"([^>]*)>([\s\S]*?)<\/a>\s*<\/p>/gi,
 		(match, _pre, href, _post, text) => {
 			let pathname: string;
@@ -103,14 +119,34 @@ function autoEmbedImages(html: string): string {
 	);
 }
 
-/**
- * Render Reddit-style markdown to a sanitised HTML string. Server-only.
- * Standalone image-link paragraphs are turned into embedded thumbnails;
- * everything else passes through marked + DOMPurify.
- */
+// Content-keyed LRU memo. marked + DOMPurify + the regex passes are pure
+// functions of the input body, so the same body always yields the same HTML.
+// Comment bodies are mostly small and frequently re-rendered (re-navigation,
+// streamed batches, "load more" expansions), and this turns those repeats
+// into a Map lookup.
+const RENDER_CACHE_MAX = 5000;
+const renderCache = new Map<string, string>();
+
 export function renderMarkdown(body: string | undefined | null): string {
 	if (!body) return '';
+	const cached = renderCache.get(body);
+	if (cached !== undefined) {
+		// Refresh LRU position.
+		renderCache.delete(body);
+		renderCache.set(body, cached);
+		return cached;
+	}
 	const html = marked.parse(body, { async: false }) as string;
 	const sanitised = DOMPurify.sanitize(html, PURIFY_CONFIG);
-	return autoEmbedImages(sanitised);
+	const out = autoEmbedImages(sanitised);
+	renderCache.set(body, out);
+	if (renderCache.size > RENDER_CACHE_MAX) {
+		const oldest = renderCache.keys().next().value;
+		if (oldest !== undefined) renderCache.delete(oldest);
+	}
+	return out;
+}
+
+export function _clearRenderCache() {
+	renderCache.clear();
 }
