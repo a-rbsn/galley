@@ -79,16 +79,16 @@
 	</header>
 
 	{#if !collapsed}
-		<div class="body">
-			{#if comment.bodyHtml}
-				{@html comment.bodyHtml}
-			{:else}
-				<p>{comment.body}</p>
-			{/if}
-		</div>
+		<div class="content">
+			<div class="body">
+				{#if comment.bodyHtml}
+					{@html comment.bodyHtml}
+				{:else}
+					<p>{comment.body}</p>
+				{/if}
+			</div>
 
-		{#if hasReplies}
-			{#if repliesExpanded}
+			{#if hasReplies && repliesExpanded}
 				<div class="replies">
 					{#each comment.replies as reply (reply.id)}
 						{#if reply.kind === 't1'}
@@ -103,6 +103,11 @@
 						{/if}
 					{/each}
 				</div>
+			{/if}
+		</div>
+
+		{#if hasReplies}
+			{#if repliesExpanded}
 				<button type="button" class="hide-replies" onclick={toggleReplies}>
 					hide replies
 				</button>
@@ -121,16 +126,18 @@
 		padding: 6px 0 4px 26px;
 	}
 
-	/* Vertical line on the left of comments with visible replies — runs from
-	   under the toggle box down through the comment + replies block. The
-	   show-replies button (and nested curves) carry their own paper-coloured
-	   background so they mask the line cleanly where they cross it. */
-	.comment.has-replies:not(.collapsed)::before {
+	/* Vertical line on the left of comments with visible replies. Drawn on
+	   .content so it spans only the body + replies area — never past the
+	   show-replies / hide-replies button that sits below .content. */
+	.content {
+		position: relative;
+	}
+	.comment.has-replies:not(.collapsed) .content::before {
 		content: '';
 		position: absolute;
-		left: 8px;
-		top: 26px;
-		bottom: 4px;
+		left: -18px;
+		top: 0;
+		bottom: 0;
 		width: 1px;
 		background: var(--rule);
 	}
@@ -292,7 +299,8 @@
 
 	.show-replies {
 		position: relative;
-		margin: 6px 0;
+		display: block;
+		margin: 0 0 6px;
 		padding: 2px 10px;
 		background: var(--paper);
 		border: 1px solid var(--rule);
@@ -308,14 +316,16 @@
 		border-color: var(--ink-3);
 		color: var(--ink);
 	}
+	/* Curve on the show-replies button — picks up where .content's line ends.
+	   Curve box sits above the button so its top-left aligns with the line
+	   bottom and its bottom-right meets the button's left edge. */
 	.show-replies::before {
 		content: '';
 		position: absolute;
-		top: 0;
+		top: -14px;
 		left: -18px;
 		width: 18px;
 		height: 14px;
-		background: var(--paper);
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
 		border-bottom-left-radius: 14px;
