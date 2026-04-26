@@ -22,23 +22,39 @@
 	} = $props();
 
 	let collapsed = $state(false);
+	let repliesExpanded = $state(false);
 
 	function toggle() {
 		collapsed = !collapsed;
+	}
+
+	function toggleReplies() {
+		repliesExpanded = !repliesExpanded;
 	}
 
 	function handleMore(moreId: string, replacement: Array<CommentView | MoreCommentsView>) {
 		onReplaceMore(comment.replies, moreId, replacement);
 	}
 
+	function countAllReplies(replies: Array<CommentView | MoreCommentsView>): number {
+		let n = 0;
+		for (const r of replies) {
+			if (r.kind === 't1') n += 1 + countAllReplies(r.replies);
+			else n += r.count;
+		}
+		return n;
+	}
+
 	const nested = $derived(comment.depth > 0);
 	const hasReplies = $derived(comment.replies.length > 0);
+	const totalReplies = $derived(countAllReplies(comment.replies));
 </script>
 
 <article
 	class="comment"
 	class:nested
 	class:has-replies={hasReplies}
+	class:replies-expanded={repliesExpanded}
 	class:stickied={comment.stickied}
 	class:collapsed
 >
@@ -67,20 +83,29 @@
 		</div>
 
 		{#if hasReplies}
-			<div class="replies">
-				{#each comment.replies as reply (reply.id)}
-					{#if reply.kind === 't1'}
-						<Self comment={reply} {sub} {postId} {onReplaceMore} />
-					{:else}
-						<MoreCommentsLink
-							more={reply}
-							{sub}
-							{postId}
-							onLoad={(rep) => handleMore(reply.id, rep)}
-						/>
-					{/if}
-				{/each}
-			</div>
+			{#if repliesExpanded}
+				<div class="replies">
+					{#each comment.replies as reply (reply.id)}
+						{#if reply.kind === 't1'}
+							<Self comment={reply} {sub} {postId} {onReplaceMore} />
+						{:else}
+							<MoreCommentsLink
+								more={reply}
+								{sub}
+								{postId}
+								onLoad={(rep) => handleMore(reply.id, rep)}
+							/>
+						{/if}
+					{/each}
+				</div>
+				<button type="button" class="hide-replies" onclick={toggleReplies}>
+					Hide replies ↑
+				</button>
+			{:else}
+				<button type="button" class="show-replies" onclick={toggleReplies}>
+					Show {totalReplies} {totalReplies === 1 ? 'reply' : 'replies'} ↓
+				</button>
+			{/if}
 		{/if}
 	{/if}
 </article>
@@ -91,7 +116,7 @@
 		padding: 8px 0 4px 18px;
 	}
 
-	/* Vertical line on the left of comments that have visible replies */
+	/* Vertical line on the left of comments with visible replies */
 	.comment.has-replies:not(.collapsed)::before {
 		content: '';
 		position: absolute;
@@ -100,6 +125,12 @@
 		bottom: 4px;
 		width: 1px;
 		background: var(--rule);
+	}
+	/* When replies are collapsed, line ends at the show-replies button's curve
+	   so we don't get a dangling stub below it. */
+	.comment.has-replies:not(.replies-expanded):not(.collapsed)::before {
+		bottom: auto;
+		height: calc(100% - 22px - 28px);
 	}
 
 	/* Curve hooking back to the parent's vertical line — only on nested comments */
@@ -244,6 +275,49 @@
 
 	.replies {
 		margin-top: 4px;
+	}
+
+	.show-replies,
+	.hide-replies {
+		position: relative;
+		margin: 4px 0;
+		padding: 4px 0;
+		background: transparent;
+		border: none;
+		font-family: var(--sans);
+		font-size: 11px;
+		letter-spacing: 0.06em;
+		color: var(--accent);
+		text-decoration: underline;
+		text-underline-offset: 3px;
+		cursor: pointer;
+	}
+	.show-replies:hover,
+	.hide-replies:hover {
+		color: var(--accent-deep);
+	}
+
+	.show-replies::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: -12px;
+		width: 18px;
+		height: 16px;
+		border-left: 1px solid var(--rule);
+		border-bottom: 1px solid var(--rule);
+		border-bottom-left-radius: 14px;
+	}
+
+	.hide-replies {
+		color: var(--ink-3);
+		font-size: 10px;
+		text-decoration: none;
+		text-transform: uppercase;
+		letter-spacing: 0.14em;
+	}
+	.hide-replies:hover {
+		color: var(--ink);
 	}
 
 	@media (max-width: 760px) {
