@@ -17,6 +17,7 @@
 	let error = $state<string | null>(null);
 
 	const cleanParentId = $derived(more.parentId.replace(/^t[1-9]_/, ''));
+	const nested = $derived(more.depth > 0);
 
 	async function load() {
 		if (loading) return;
@@ -40,14 +41,14 @@
 </script>
 
 {#if loading}
-	<p class="more loading"><em>Loading {more.count} {more.count === 1 ? 'reply' : 'replies'}…</em></p>
+	<p class="more loading" class:nested><em>Loading {more.count} {more.count === 1 ? 'reply' : 'replies'}…</em></p>
 {:else if error}
-	<p class="more error">
+	<p class="more error" class:nested>
 		<em>Couldn't load: {error}</em>
 		<button type="button" onclick={load}>Retry</button>
 	</p>
 {:else}
-	<p class="more">
+	<p class="more" class:nested>
 		<button type="button" onclick={load}>
 			Load {more.count > 0 ? `${more.count} more ${more.count === 1 ? 'reply' : 'replies'}` : 'thread continuation'} ↓
 		</button>
@@ -56,11 +57,27 @@
 
 <style>
 	.more {
-		margin: 6px 0;
+		position: relative;
+		margin: 4px 0 4px 18px;
+		padding: 4px 0;
 		font-family: var(--sans);
 		font-size: 11px;
 		letter-spacing: 0.06em;
 	}
+
+	/* Curve hooking back to the parent's vertical line for nested placeholders */
+	.more.nested::before {
+		content: '';
+		position: absolute;
+		top: -4px;
+		left: -12px;
+		width: 18px;
+		height: 18px;
+		border-left: 1px solid var(--rule);
+		border-bottom: 1px solid var(--rule);
+		border-bottom-left-radius: 14px;
+	}
+
 	button {
 		background: transparent;
 		border: none;

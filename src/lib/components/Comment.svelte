@@ -30,9 +30,18 @@
 	function handleMore(moreId: string, replacement: Array<CommentView | MoreCommentsView>) {
 		onReplaceMore(comment.replies, moreId, replacement);
 	}
+
+	const nested = $derived(comment.depth > 0);
+	const hasReplies = $derived(comment.replies.length > 0);
 </script>
 
-<article class="comment" class:stickied={comment.stickied} class:collapsed>
+<article
+	class="comment"
+	class:nested
+	class:has-replies={hasReplies}
+	class:stickied={comment.stickied}
+	class:collapsed
+>
 	<header class="byline">
 		<button type="button" class="toggle" onclick={toggle} aria-label={collapsed ? 'Expand' : 'Collapse'}>
 			{collapsed ? '+' : '−'}
@@ -57,7 +66,7 @@
 			{/if}
 		</div>
 
-		{#if comment.replies.length > 0}
+		{#if hasReplies}
 			<div class="replies">
 				{#each comment.replies as reply (reply.id)}
 					{#if reply.kind === 't1'}
@@ -78,13 +87,36 @@
 
 <style>
 	.comment {
-		padding: 10px 0 8px;
-		border-top: 1px solid var(--rule);
+		position: relative;
+		padding: 8px 0 4px 18px;
 	}
+
+	/* Vertical line on the left of comments that have visible replies */
+	.comment.has-replies:not(.collapsed)::before {
+		content: '';
+		position: absolute;
+		left: 6px;
+		top: 22px;
+		bottom: 4px;
+		width: 1px;
+		background: var(--rule);
+	}
+
+	/* Curve hooking back to the parent's vertical line — only on nested comments */
+	.comment.nested::after {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: -12px;
+		width: 18px;
+		height: 18px;
+		border-left: 1px solid var(--rule);
+		border-bottom: 1px solid var(--rule);
+		border-bottom-left-radius: 14px;
+	}
+
 	.comment.stickied {
 		background: linear-gradient(to right, var(--accent-soft), transparent 200px);
-		padding-left: 10px;
-		margin-left: -10px;
 	}
 
 	.byline {
@@ -109,7 +141,7 @@
 		height: 18px;
 		line-height: 1;
 		padding: 0;
-		margin-right: 10px;
+		margin-right: 8px;
 		cursor: pointer;
 		font-style: normal;
 	}
@@ -123,7 +155,7 @@
 		font-weight: 500;
 	}
 	.sep {
-		margin: 0 8px;
+		margin: 0 6px;
 		color: var(--ink-4);
 		font-style: normal;
 	}
@@ -144,7 +176,7 @@
 	}
 
 	.body {
-		margin: 6px 0 4px;
+		margin: 4px 0 6px;
 		font-family: var(--serif);
 		font-size: 15.5px;
 		line-height: 1.5;
@@ -211,17 +243,10 @@
 	}
 
 	.replies {
-		margin-top: 6px;
-		padding-left: 16px;
-		border-left: 1px solid var(--rule);
-		margin-left: 6px;
+		margin-top: 4px;
 	}
 
 	@media (max-width: 760px) {
-		.replies {
-			padding-left: 10px;
-			margin-left: 2px;
-		}
 		.body {
 			font-size: 14.5px;
 		}
