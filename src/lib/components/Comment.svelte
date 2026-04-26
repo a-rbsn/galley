@@ -155,7 +155,7 @@
 		position: absolute;
 		top: 26px;
 		left: 8px;
-		bottom: 30px;
+		bottom: 20px;
 		width: 18px;
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
