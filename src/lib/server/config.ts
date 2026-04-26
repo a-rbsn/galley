@@ -66,17 +66,22 @@ export function isConfigured(): boolean {
 }
 
 function writeConfig(next: InstanceConfig) {
-	cached = next;
-	if (!CONFIG_PATH) return;
-	try {
-		const dir = dirname(CONFIG_PATH);
-		if (dir && dir !== '.' && !existsSync(dir)) mkdirSync(dir, { recursive: true });
-		writeFileSync(CONFIG_PATH, JSON.stringify(next, null, 2));
-	} catch (e) {
-		throw new Error(
-			`Could not write config to ${CONFIG_PATH}: ${e instanceof Error ? e.message : String(e)}`
-		);
+	if (CONFIG_PATH) {
+		try {
+			const dir = dirname(CONFIG_PATH);
+			if (dir && dir !== '.' && !existsSync(dir)) mkdirSync(dir, { recursive: true });
+			writeFileSync(CONFIG_PATH, JSON.stringify(next, null, 2));
+		} catch (e) {
+			// If the write fails the in-memory cache must NOT be updated —
+			// otherwise the operator looks "configured" for the lifetime of
+			// the process, which masks the failure (the next container start
+			// finds an empty file and bounces them back to /setup).
+			throw new Error(
+				`Could not write config to ${CONFIG_PATH}: ${e instanceof Error ? e.message : String(e)}`
+			);
+		}
 	}
+	cached = next;
 }
 
 export function setRedditUsername(username: string) {

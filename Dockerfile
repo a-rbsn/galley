@@ -37,12 +37,18 @@ COPY --from=build /app/build ./build
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./
 
+# su-exec lets the entrypoint chown /data as root then drop to node.
+RUN apk add --no-cache su-exec
+
 # /data holds the persistent config + cache files. Mount a volume here.
 RUN mkdir -p /data && chown -R node:node /app /data
 
-USER node
+# Entrypoint fixes /data ownership at startup (Docker creates named
+# volumes as root) before exec-ing the Node server as the node user.
+COPY --chmod=0755 entrypoint.sh /entrypoint.sh
 
 EXPOSE 3000
 VOLUME ["/data"]
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["node", "build"]
