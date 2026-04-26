@@ -71,11 +71,12 @@
 		position: absolute;
 		top: 0;
 		left: -18px;
-		width: 10px;
+		width: 18px;
 		height: 14px;
+		background: var(--paper);
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
-		border-bottom-left-radius: 10px;
+		border-bottom-left-radius: 14px;
 	}
 
 	button {

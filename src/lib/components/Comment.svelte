@@ -136,17 +136,21 @@
 	}
 
 	/* Curve hooking back to the parent's vertical line on nested comments —
-	   ends at the child's toggle left edge. */
+	   spans from the parent's line (element-rel x = -18, since padding-left
+	   is 26 and the parent line sits at left:8) to the child's toggle-left
+	   edge at element-rel x = 0. Background masks the parent line behind the
+	   curve so it reads as a clean continuation. */
 	.comment.nested::after {
 		content: '';
 		position: absolute;
 		top: 0;
-		left: -10px;
-		width: 10px;
+		left: -18px;
+		width: 18px;
 		height: 14px;
+		background: var(--paper);
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
-		border-bottom-left-radius: 10px;
+		border-bottom-left-radius: 14px;
 	}
 
 	.comment.stickied {
@@ -307,14 +311,14 @@
 	.show-replies::before {
 		content: '';
 		position: absolute;
-		top: -2px;
-		left: -10px;
-		width: 10px;
+		top: 0;
+		left: -18px;
+		width: 18px;
 		height: 14px;
 		background: var(--paper);
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
-		border-bottom-left-radius: 10px;
+		border-bottom-left-radius: 14px;
 	}
 
 	.hide-replies {
