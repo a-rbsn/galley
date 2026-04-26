@@ -55,19 +55,29 @@
 			</div>
 		</form>
 	{:else}
-		<h1>Pick a few subreddits.</h1>
+		<h1>Pick some subreddits.</h1>
 		<p class="lede">
 			Galley assembles your front page by reading these subreddits' public JSON endpoints. Add
-			as many as you like — or skip and add them later from Settings.
+			as many as you like — keep going until you're done, then click <strong>Continue</strong>
+			at the bottom.
 		</p>
 
 		<div class="picker">
 			<AddSubreddit />
 		</div>
 
-		{#if displayed.length > 0}
-			<section class="picked">
-				<h2>Following</h2>
+		<section class="picked">
+			<h2>
+				Following
+				<span class="count">
+					{displayed.length} subreddit{displayed.length === 1 ? '' : 's'}
+				</span>
+			</h2>
+			{#if displayed.length === 0}
+				<p class="picked-empty">
+					<em>Nothing yet. Pick from the suggestions above, or search for one you already follow on Reddit.</em>
+				</p>
+			{:else}
 				<ul>
 					{#each displayed as sub (sub)}
 						<li>
@@ -83,11 +93,13 @@
 						</li>
 					{/each}
 				</ul>
-			</section>
-		{/if}
+			{/if}
+		</section>
 
 		<div class="actions">
-			<a class="primary" href="/">{displayed.length > 0 ? 'Done →' : 'Skip for now →'}</a>
+			<a class="primary" href="/">
+				{displayed.length > 0 ? `Continue with ${displayed.length} →` : 'Skip for now →'}
+			</a>
 		</div>
 	{/if}
 </section>
@@ -184,6 +196,9 @@
 		padding-top: 18px;
 	}
 	.picked h2 {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
 		font-family: var(--sans);
 		font-weight: 500;
 		font-size: 10px;
@@ -191,6 +206,17 @@
 		text-transform: uppercase;
 		color: var(--ink-3);
 		margin: 0 0 10px;
+	}
+	.picked .count {
+		font-weight: 400;
+		color: var(--ink-4);
+		letter-spacing: 0.16em;
+	}
+	.picked-empty {
+		font-family: var(--serif);
+		color: var(--ink-3);
+		font-size: 14px;
+		margin: 6px 0 0;
 	}
 	.picked ul {
 		list-style: none;

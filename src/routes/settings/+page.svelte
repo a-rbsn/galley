@@ -131,7 +131,7 @@
 	</section>
 
 	<section class="block">
-		<AddSubreddit />
+		<AddSubreddit onAdded={() => void invalidateAll()} />
 	</section>
 
 	<section class="block">

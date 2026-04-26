@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { addSub, subsState } from '$lib/stores/subs.svelte';
 	import { formatScore } from '$lib/util/format';
-	import { invalidateAll } from '$app/navigation';
 
 	interface Result {
 		name: string;
@@ -10,6 +9,8 @@
 		subscribers: number;
 		description: string;
 	}
+
+	let { onAdded }: { onAdded?: (name: string) => void } = $props();
 
 	let query = $state('');
 	let results = $state<Result[]>([]);
@@ -60,7 +61,7 @@
 			query = '';
 			results = [];
 			error = null;
-			void invalidateAll();
+			onAdded?.(name);
 		} else {
 			error = `Couldn't add r/${name}. Already added or invalid name.`;
 		}

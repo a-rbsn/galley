@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { invalidateAll } from '$app/navigation';
 	import AddSubreddit from '$lib/components/AddSubreddit.svelte';
 	import PostListItem from '$lib/components/PostListItem.svelte';
 	import FeedHeader from '$lib/components/FeedHeader.svelte';
@@ -30,7 +31,7 @@
 				them, using Reddit's public JSON endpoints.
 			</p>
 			<div class="picker">
-				<AddSubreddit />
+				<AddSubreddit onAdded={() => void invalidateAll()} />
 			</div>
 			<p class="footnote">
 				<em>You can rearrange or remove subreddits later from the
