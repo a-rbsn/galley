@@ -122,7 +122,9 @@
 	}
 
 	/* Vertical line on the left of comments with visible replies — runs from
-	   under the toggle box down through the comment + replies block. */
+	   under the toggle box down through the comment + replies block. The
+	   show-replies button (and nested curves) carry their own paper-coloured
+	   background so they mask the line cleanly where they cross it. */
 	.comment.has-replies:not(.collapsed)::before {
 		content: '';
 		position: absolute;
@@ -131,11 +133,6 @@
 		bottom: 4px;
 		width: 1px;
 		background: var(--rule);
-	}
-	/* Collapsed-replies state: line stops at the show-replies button's curve. */
-	.comment.has-replies:not(.replies-expanded):not(.collapsed)::before {
-		bottom: auto;
-		height: calc(100% - 26px - 28px);
 	}
 
 	/* Curve hooking back to the parent's vertical line on nested comments —
@@ -292,28 +289,29 @@
 	.show-replies {
 		position: relative;
 		margin: 6px 0;
-		padding: 4px 12px;
-		background: transparent;
-		border: 1px solid var(--rule-strong);
+		padding: 2px 10px;
+		background: var(--paper);
+		border: 1px solid var(--rule);
 		border-radius: 999px;
 		font-family: var(--sans);
-		font-size: 10px;
+		font-size: 9.5px;
 		letter-spacing: 0.16em;
 		text-transform: uppercase;
 		color: var(--ink-3);
 		cursor: pointer;
 	}
 	.show-replies:hover {
-		border-color: var(--ink);
+		border-color: var(--ink-3);
 		color: var(--ink);
 	}
 	.show-replies::before {
 		content: '';
 		position: absolute;
-		top: 0;
+		top: -2px;
 		left: -10px;
 		width: 10px;
 		height: 14px;
+		background: var(--paper);
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
 		border-bottom-left-radius: 10px;
