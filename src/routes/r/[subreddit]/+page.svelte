@@ -41,7 +41,7 @@
 					class="add-button"
 					title="Add r/{data.sub} to feed"
 					aria-label="Add r/{data.sub} to feed"
-					onclick={() => addSub(data.sub)}
+					onclick={() => void addSub(data.sub)}
 				>
 					<svg
 						viewBox="0 0 24 24"

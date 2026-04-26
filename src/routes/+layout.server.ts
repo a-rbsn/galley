@@ -1,8 +1,9 @@
 import type { LayoutServerLoad } from './$types';
+import { getSubreddits, setSubreddits } from '$lib/server/config';
 
-const COOKIE = 'galley_subs';
+const LEGACY_COOKIE = 'galley_subs';
 
-function parseSubs(raw: string | undefined): string[] {
+function parseLegacyCookie(raw: string | undefined): string[] {
 	if (!raw) return [];
 	const seen = new Set<string>();
 	const out: string[] = [];
@@ -17,5 +18,18 @@ function parseSubs(raw: string | undefined): string[] {
 }
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
-	return { subs: parseSubs(cookies.get(COOKIE)) };
+	let subs = getSubreddits();
+
+	// One-time migration: if the disk config has no subs but the user had
+	// some saved in the legacy cookie, lift them over so existing instances
+	// don't lose state when upgrading.
+	if (subs.length === 0) {
+		const legacy = parseLegacyCookie(cookies.get(LEGACY_COOKIE));
+		if (legacy.length > 0) {
+			subs = setSubreddits(legacy);
+			cookies.delete(LEGACY_COOKIE, { path: '/' });
+		}
+	}
+
+	return { subs };
 };

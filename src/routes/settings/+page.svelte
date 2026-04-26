@@ -20,13 +20,13 @@
 	let dragIndex = $state<number | null>(null);
 	let dropIndex = $state<number | null>(null);
 
-	function handleRemove(name: string) {
-		removeSub(name);
+	async function handleRemove(name: string) {
+		await removeSub(name);
 		void invalidateAll();
 	}
 
-	function handleMove(name: string, dir: -1 | 1) {
-		moveSub(name, dir);
+	async function handleMove(name: string, dir: -1 | 1) {
+		await moveSub(name, dir);
 		void invalidateAll();
 	}
 
@@ -45,14 +45,14 @@
 		dropIndex = i;
 	}
 
-	function handleDrop(e: DragEvent, i: number) {
+	async function handleDrop(e: DragEvent, i: number) {
 		e.preventDefault();
 		if (dragIndex === null) return;
 		const from = dragIndex;
 		dragIndex = null;
 		dropIndex = null;
 		if (from === i) return;
-		reorderSub(from, i);
+		await reorderSub(from, i);
 		void invalidateAll();
 	}
 

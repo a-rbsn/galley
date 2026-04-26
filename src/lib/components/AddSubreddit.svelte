@@ -54,8 +54,8 @@
 		}
 	}
 
-	function add(name: string) {
-		const ok = addSub(name);
+	async function add(name: string) {
+		const ok = await addSub(name);
 		if (ok) {
 			query = '';
 			results = [];

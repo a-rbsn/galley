@@ -1,44 +1,12 @@
+/**
+ * Client-side mirror of the subreddit list. The persisted source of truth
+ * lives on the server in .galley-config.json; this store exists for
+ * optimistic UI updates so the list responds instantly to add/remove/move
+ * actions without waiting for a server round-trip. Each mutation is
+ * shadowed by a PUT to /api/subs.
+ */
+
 import { browser } from '$app/environment';
-
-const STORAGE_KEY = 'galley:subs';
-
-function readStorage(): string[] {
-	if (!browser) return [];
-	try {
-		const raw = localStorage.getItem(STORAGE_KEY);
-		if (!raw) return [];
-		const parsed = JSON.parse(raw);
-		if (!Array.isArray(parsed)) return [];
-		return parsed
-			.filter((x): x is string => typeof x === 'string' && x.length > 0)
-			.map((s) => s.toLowerCase());
-	} catch {
-		return [];
-	}
-}
-
-const COOKIE = 'galley_subs';
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
-
-function writeStorage(list: string[]) {
-	if (!browser) return;
-	try {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-	} catch {
-		// quota or disabled — ignore.
-	}
-	// Mirror to cookie so server-side load() can read the list.
-	try {
-		const value = encodeURIComponent(list.join(','));
-		document.cookie = `${COOKIE}=${value}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
-	} catch {
-		// ignore
-	}
-}
-
-function normalise(name: string): string {
-	return name.trim().replace(/^\/?r\//i, '').toLowerCase();
-}
 
 export const subsState = $state<{ list: string[]; hydrated: boolean }>({
 	list: [],
@@ -47,36 +15,44 @@ export const subsState = $state<{ list: string[]; hydrated: boolean }>({
 
 export function hydrateSubs(serverSubs?: string[]) {
 	if (subsState.hydrated) return;
-	const fromStorage = readStorage();
-	// Prefer the server-known list (from cookie); fall back to localStorage; if
-	// they differ, mirror the server view to localStorage so the two agree.
-	const list = serverSubs && serverSubs.length > 0 ? serverSubs : fromStorage;
-	if (
-		list !== fromStorage &&
-		(list.length !== fromStorage.length || list.some((s, i) => s !== fromStorage[i]))
-	) {
-		writeStorage(list);
-	}
-	subsState.list = list;
+	subsState.list = serverSubs ?? [];
 	subsState.hydrated = true;
 }
 
-export function addSub(name: string): boolean {
+function normalise(name: string): string {
+	return name.trim().replace(/^\/?r\//i, '').toLowerCase();
+}
+
+async function persist(list: string[]) {
+	if (!browser) return;
+	try {
+		await fetch('/api/subs', {
+			method: 'PUT',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ subs: list })
+		});
+	} catch {
+		// Best-effort; if the server is unreachable the user will see their
+		// optimistic change and the next page load will reconcile from disk.
+	}
+}
+
+export async function addSub(name: string): Promise<boolean> {
 	const n = normalise(name);
 	if (!n || !/^[a-z0-9_]{2,21}$/i.test(n)) return false;
 	if (subsState.list.includes(n)) return false;
 	subsState.list = [...subsState.list, n];
-	writeStorage(subsState.list);
+	await persist(subsState.list);
 	return true;
 }
 
-export function removeSub(name: string) {
+export async function removeSub(name: string): Promise<void> {
 	const n = normalise(name);
 	subsState.list = subsState.list.filter((s) => s !== n);
-	writeStorage(subsState.list);
+	await persist(subsState.list);
 }
 
-export function moveSub(name: string, dir: -1 | 1) {
+export async function moveSub(name: string, dir: -1 | 1): Promise<void> {
 	const n = normalise(name);
 	const idx = subsState.list.indexOf(n);
 	if (idx < 0) return;
@@ -85,10 +61,10 @@ export function moveSub(name: string, dir: -1 | 1) {
 	const list = [...subsState.list];
 	[list[idx], list[next]] = [list[next], list[idx]];
 	subsState.list = list;
-	writeStorage(subsState.list);
+	await persist(subsState.list);
 }
 
-export function reorderSub(from: number, to: number) {
+export async function reorderSub(from: number, to: number): Promise<void> {
 	if (from === to) return;
 	if (from < 0 || from >= subsState.list.length) return;
 	if (to < 0 || to >= subsState.list.length) return;
@@ -96,7 +72,7 @@ export function reorderSub(from: number, to: number) {
 	const [item] = list.splice(from, 1);
 	list.splice(to, 0, item);
 	subsState.list = list;
-	writeStorage(subsState.list);
+	await persist(subsState.list);
 }
 
 export function hasSubs(): boolean {

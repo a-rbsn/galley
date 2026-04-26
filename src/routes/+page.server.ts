@@ -6,9 +6,8 @@ import {
 	type Listing,
 	type RawPost
 } from '$lib/server/reddit';
+import { getSubreddits } from '$lib/server/config';
 import type { PostView } from '$lib/types';
-
-const COOKIE = 'galley_subs';
 
 export type Sort = 'hot' | 'new' | 'top' | 'rising';
 
@@ -16,22 +15,8 @@ function isSort(s: string | null): s is Sort {
 	return s === 'hot' || s === 'new' || s === 'top' || s === 'rising';
 }
 
-function parseSubs(raw: string | undefined): string[] {
-	if (!raw) return [];
-	const seen = new Set<string>();
-	const out: string[] = [];
-	for (const part of decodeURIComponent(raw).split(',')) {
-		const s = part.trim().toLowerCase();
-		if (!/^[a-z0-9_]{2,21}$/.test(s)) continue;
-		if (seen.has(s)) continue;
-		seen.add(s);
-		out.push(s);
-	}
-	return out;
-}
-
-export const load: PageServerLoad = async ({ cookies, url }) => {
-	const subs = parseSubs(cookies.get(COOKIE));
+export const load: PageServerLoad = async ({ url }) => {
+	const subs = getSubreddits();
 	const sortParam = url.searchParams.get('sort');
 	const sort: Sort = isSort(sortParam) ? sortParam : 'hot';
 

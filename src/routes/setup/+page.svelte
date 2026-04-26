@@ -75,7 +75,7 @@
 							<button
 								type="button"
 								class="remove"
-								onclick={() => removeSub(sub)}
+								onclick={() => void removeSub(sub)}
 								aria-label="Remove r/{sub}"
 							>
 								Remove

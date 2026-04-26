@@ -14,7 +14,11 @@ import { dirname, resolve } from 'node:path';
 
 export interface InstanceConfig {
 	redditUsername?: string;
+	subreddits?: string[];
 }
+
+const SUB_RE = /^[a-z0-9_]{2,21}$/;
+const MAX_SUBS = 200;
 
 const CONFIG_PATH = resolveConfigPath();
 let cached: InstanceConfig | null = null;
@@ -61,8 +65,7 @@ export function isConfigured(): boolean {
 	return !!getRedditUsername();
 }
 
-export function setRedditUsername(username: string) {
-	const next = { ...ensureLoaded(), redditUsername: username };
+function writeConfig(next: InstanceConfig) {
 	cached = next;
 	if (!CONFIG_PATH) return;
 	try {
@@ -74,6 +77,36 @@ export function setRedditUsername(username: string) {
 			`Could not write config to ${CONFIG_PATH}: ${e instanceof Error ? e.message : String(e)}`
 		);
 	}
+}
+
+export function setRedditUsername(username: string) {
+	writeConfig({ ...ensureLoaded(), redditUsername: username });
+}
+
+export function getSubreddits(): string[] {
+	const list = ensureLoaded().subreddits ?? [];
+	return list.filter((s): s is string => typeof s === 'string' && SUB_RE.test(s));
+}
+
+/**
+ * Replace the persisted subreddit list. Names are lowercased, trimmed,
+ * deduplicated, and capped at MAX_SUBS. Invalid names are dropped silently
+ * since the API endpoint already validates upstream.
+ */
+export function setSubreddits(input: string[]): string[] {
+	const seen = new Set<string>();
+	const cleaned: string[] = [];
+	for (const raw of input) {
+		if (typeof raw !== 'string') continue;
+		const s = raw.trim().toLowerCase();
+		if (!SUB_RE.test(s)) continue;
+		if (seen.has(s)) continue;
+		seen.add(s);
+		cleaned.push(s);
+		if (cleaned.length >= MAX_SUBS) break;
+	}
+	writeConfig({ ...ensureLoaded(), subreddits: cleaned });
+	return cleaned;
 }
 
 /**
