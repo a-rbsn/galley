@@ -99,11 +99,11 @@
 					{/each}
 				</div>
 				<button type="button" class="hide-replies" onclick={toggleReplies}>
-					Hide replies ↑
+					hide replies
 				</button>
 			{:else}
 				<button type="button" class="show-replies" onclick={toggleReplies}>
-					Show {totalReplies} {totalReplies === 1 ? 'reply' : 'replies'} ↓
+					show more replies
 				</button>
 			{/if}
 		{/if}
@@ -285,16 +285,15 @@
 		background: transparent;
 		border: none;
 		font-family: var(--sans);
-		font-size: 11px;
-		letter-spacing: 0.06em;
-		color: var(--accent);
-		text-decoration: underline;
-		text-underline-offset: 3px;
+		font-size: 10px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--ink-3);
 		cursor: pointer;
 	}
 	.show-replies:hover,
 	.hide-replies:hover {
-		color: var(--accent-deep);
+		color: var(--ink);
 	}
 
 	.show-replies::before {
@@ -309,16 +308,6 @@
 		border-bottom-left-radius: 14px;
 	}
 
-	.hide-replies {
-		color: var(--ink-3);
-		font-size: 10px;
-		text-decoration: none;
-		text-transform: uppercase;
-		letter-spacing: 0.14em;
-	}
-	.hide-replies:hover {
-		color: var(--ink);
-	}
 
 	@media (max-width: 760px) {
 		.body {
