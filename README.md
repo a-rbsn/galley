@@ -102,7 +102,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./data:/data
+      - galley-data:/data
+
+volumes:
+  galley-data:
 ```
 
 ```
@@ -123,7 +126,7 @@ response cache.
 docker run -d \
   --name galley \
   -p 3000:3000 \
-  -v $(pwd)/data:/data \
+  -v galley-data:/data \
   --restart unless-stopped \
   ghcr.io/a-rbsn/galley:latest
 ```

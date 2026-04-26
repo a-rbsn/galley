@@ -6,10 +6,14 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # Persistent storage for the instance config (Reddit username) and
-      # the on-disk Reddit response cache. Survives container restarts.
-      - ./data:/data
+      # Named volume — Docker manages ownership so the container's `node`
+      # user can always write to it, and it survives docker compose down /
+      # pull / up cycles indefinitely.
+      - galley-data:/data
     # Optional: pin a specific User-Agent instead of going through the
     # /setup screen on first launch. The screen still works without this.
     # environment:
     #   REDDIT_USER_AGENT: "web:io.galley.app:v0.1.0 (by /u/your-name)"
+
+volumes:
+  galley-data:
