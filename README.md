@@ -10,6 +10,12 @@ The visual direction is contemporary editorial. Newspaper-influenced
 typography, hairline rules in place of cards, a serif for headlines and
 body text, a restrained sans for metadata.
 
+<p align="center">
+  <img src="screenshots/desktop.png" width="640" alt="Galley on desktop — front-page feed" />
+  &nbsp;
+  <img src="screenshots/mobile.png" width="220" alt="Galley on mobile — front-page feed" />
+</p>
+
 ## Status
 
 Early. The interface design is settled and lives as static mocks under
