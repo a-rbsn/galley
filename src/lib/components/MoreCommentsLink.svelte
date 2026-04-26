@@ -58,7 +58,7 @@
 <style>
 	.more {
 		position: relative;
-		margin: 4px 0 4px 18px;
+		margin: 4px 0 4px 26px;
 		padding: 4px 0;
 		font-family: var(--sans);
 		font-size: 11px;
@@ -69,13 +69,13 @@
 	.more.nested::before {
 		content: '';
 		position: absolute;
-		top: -4px;
-		left: -12px;
-		width: 18px;
-		height: 18px;
+		top: 0;
+		left: -18px;
+		width: 10px;
+		height: 14px;
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
-		border-bottom-left-radius: 14px;
+		border-bottom-left-radius: 10px;
 	}
 
 	button {

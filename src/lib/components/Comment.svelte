@@ -58,10 +58,15 @@
 	class:stickied={comment.stickied}
 	class:collapsed
 >
+	<button
+		type="button"
+		class="toggle"
+		onclick={toggle}
+		aria-label={collapsed ? 'Expand' : 'Collapse'}
+	>
+		{collapsed ? '+' : '−'}
+	</button>
 	<header class="byline">
-		<button type="button" class="toggle" onclick={toggle} aria-label={collapsed ? 'Expand' : 'Collapse'}>
-			{collapsed ? '+' : '−'}
-		</button>
 		<span class="author">u/{comment.author}</span>
 		<span class="sep">·</span>
 		<span class="score">{formatScore(comment.score)} pts</span>
@@ -113,37 +118,38 @@
 <style>
 	.comment {
 		position: relative;
-		padding: 8px 0 4px 18px;
+		padding: 6px 0 4px 26px;
 	}
 
-	/* Vertical line on the left of comments with visible replies */
+	/* Vertical line on the left of comments with visible replies — runs from
+	   under the toggle box down through the comment + replies block. */
 	.comment.has-replies:not(.collapsed)::before {
 		content: '';
 		position: absolute;
-		left: 6px;
-		top: 22px;
+		left: 8px;
+		top: 26px;
 		bottom: 4px;
 		width: 1px;
 		background: var(--rule);
 	}
-	/* When replies are collapsed, line ends at the show-replies button's curve
-	   so we don't get a dangling stub below it. */
+	/* Collapsed-replies state: line stops at the show-replies button's curve. */
 	.comment.has-replies:not(.replies-expanded):not(.collapsed)::before {
 		bottom: auto;
-		height: calc(100% - 22px - 28px);
+		height: calc(100% - 26px - 28px);
 	}
 
-	/* Curve hooking back to the parent's vertical line — only on nested comments */
+	/* Curve hooking back to the parent's vertical line on nested comments —
+	   ends at the child's toggle left edge. */
 	.comment.nested::after {
 		content: '';
 		position: absolute;
 		top: 0;
-		left: -12px;
-		width: 18px;
-		height: 18px;
+		left: -10px;
+		width: 10px;
+		height: 14px;
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
-		border-bottom-left-radius: 14px;
+		border-bottom-left-radius: 10px;
 	}
 
 	.comment.stickied {
@@ -163,18 +169,24 @@
 		font-variant-numeric: oldstyle-nums;
 	}
 	.toggle {
-		background: transparent;
+		position: absolute;
+		top: 6px;
+		left: 0;
+		width: 16px;
+		height: 16px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: var(--paper);
 		border: 1px solid var(--rule-strong);
 		color: var(--ink-3);
 		font-family: var(--mono);
-		font-size: 11px;
-		width: 18px;
-		height: 18px;
+		font-size: 10px;
 		line-height: 1;
 		padding: 0;
-		margin-right: 8px;
 		cursor: pointer;
 		font-style: normal;
+		z-index: 1;
 	}
 	.toggle:hover {
 		border-color: var(--ink);
@@ -277,10 +289,39 @@
 		margin-top: 4px;
 	}
 
-	.show-replies,
+	.show-replies {
+		position: relative;
+		margin: 6px 0;
+		padding: 4px 12px;
+		background: transparent;
+		border: 1px solid var(--rule-strong);
+		border-radius: 999px;
+		font-family: var(--sans);
+		font-size: 10px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		cursor: pointer;
+	}
+	.show-replies:hover {
+		border-color: var(--ink);
+		color: var(--ink);
+	}
+	.show-replies::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: -10px;
+		width: 10px;
+		height: 14px;
+		border-left: 1px solid var(--rule);
+		border-bottom: 1px solid var(--rule);
+		border-bottom-left-radius: 10px;
+	}
+
 	.hide-replies {
 		position: relative;
-		margin: 4px 0;
+		margin: 6px 0 4px;
 		padding: 4px 0;
 		background: transparent;
 		border: none;
@@ -291,21 +332,8 @@
 		color: var(--ink-3);
 		cursor: pointer;
 	}
-	.show-replies:hover,
 	.hide-replies:hover {
 		color: var(--ink);
-	}
-
-	.show-replies::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: -12px;
-		width: 18px;
-		height: 16px;
-		border-left: 1px solid var(--rule);
-		border-bottom: 1px solid var(--rule);
-		border-bottom-left-radius: 14px;
 	}
 
 
