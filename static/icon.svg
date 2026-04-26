@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Galley">
+	<rect width="512" height="512" fill="#f6f1e6" />
+	<!-- Mirror the masthead nameplate: a serifed cap-G in ink, followed by
+	     an italic terracotta period. Georgia is used because it ships on
+	     every platform, so the icon renders identically wherever the SVG
+	     is rasterised (favicon tab, PWA install, app drawer). -->
+	<text
+		x="50%"
+		y="76%"
+		text-anchor="middle"
+		font-family="Georgia, 'Times New Roman', 'Source Serif 4', serif"
+		font-size="430"
+		font-weight="400"
+	><tspan fill="#1a1612">G</tspan><tspan font-style="italic" fill="#c14a33">.</tspan></text>
+</svg>

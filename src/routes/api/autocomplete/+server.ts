@@ -8,10 +8,11 @@ export const GET: RequestHandler = async ({ url }) => {
 	}
 
 	try {
+		// Reddit gated /api/subreddit_autocomplete_v2 behind OAuth — anonymous
+		// callers now get a 404. /subreddits/search is the public read endpoint
+		// with the same listing shape and is suitable for typeahead.
 		const data = await redditJson<Listing<RawSubreddit>>(
-			`/api/subreddit_autocomplete_v2?query=${encodeURIComponent(
-				q
-			)}&include_over_18=false&include_profiles=false&typeahead_active=true&limit=10`,
+			`/subreddits/search?q=${encodeURIComponent(q)}&include_over_18=off&limit=10`,
 			{ ttl: 600 }
 		);
 

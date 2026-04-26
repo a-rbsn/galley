@@ -1,0 +1,25 @@
+{
+	"name": "Galley",
+	"short_name": "Galley",
+	"description": "A reading interface for Reddit.",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"background_color": "#f6f1e6",
+	"theme_color": "#f6f1e6",
+	"orientation": "any",
+	"icons": [
+		{
+			"src": "/icon.svg",
+			"type": "image/svg+xml",
+			"sizes": "any",
+			"purpose": "any"
+		},
+		{
+			"src": "/icon-maskable.svg",
+			"type": "image/svg+xml",
+			"sizes": "any",
+			"purpose": "maskable"
+		}
+	]
+}

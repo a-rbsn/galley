@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Galley">
+	<rect width="512" height="512" fill="#f6f1e6" />
+	<!-- Maskable variant: Android crops adaptive icons aggressively, so the
+	     glyph sits inside the inner 60% safe zone instead of filling the
+	     canvas. Same mark as icon.svg, just smaller. -->
+	<text
+		x="50%"
+		y="68%"
+		text-anchor="middle"
+		font-family="Georgia, 'Times New Roman', 'Source Serif 4', serif"
+		font-size="280"
+		font-weight="400"
+	><tspan fill="#1a1612">G</tspan><tspan font-style="italic" fill="#c14a33">.</tspan></text>
+</svg>
