@@ -317,14 +317,14 @@
 		color: var(--ink);
 	}
 	/* Curve on the show-replies button — picks up where .content's line ends.
-	   Curve box sits above the button so its top-left aligns with the line
-	   bottom and its bottom-right meets the button's left edge. */
+	   Sized so the corner lands a couple of pixels into the pill's rounded
+	   left edge rather than floating in the gap above it. */
 	.show-replies::before {
 		content: '';
 		position: absolute;
-		top: -14px;
-		left: -18px;
-		width: 18px;
+		top: -12px;
+		left: -20px;
+		width: 20px;
 		height: 14px;
 		border-left: 1px solid var(--rule);
 		border-bottom: 1px solid var(--rule);
