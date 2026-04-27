@@ -15,13 +15,13 @@
 
 	// Local writable copy so MoreCommentsLink can splice replacements in place.
 	// svelte-ignore state_referenced_locally
-	let comments = $state<Array<CommentView | MoreCommentsView>>(structuredClone(initial));
+	let comments = $state<Array<CommentView | MoreCommentsView>>($state.snapshot(initial));
 	// svelte-ignore state_referenced_locally
 	let lastInitial = initial;
 	$effect(() => {
 		if (initial !== lastInitial) {
 			lastInitial = initial;
-			comments = structuredClone(initial);
+			comments = $state.snapshot(initial);
 		}
 	});
 

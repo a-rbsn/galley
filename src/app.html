@@ -5,7 +5,11 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
 
-		<link rel="manifest" href="/manifest.webmanifest" />
+		<!-- use-credentials so the browser sends cookies on the manifest fetch.
+		     Otherwise instances behind a Cloudflare Access (or similar) gate
+		     get redirected to a cross-origin login page, which the browser
+		     then blocks for CORS. -->
+		<link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
 		<link rel="icon" href="/icon.svg" type="image/svg+xml" />
 		<link rel="apple-touch-icon" href="/icon.svg" />
 		<meta name="theme-color" content="#f6f1e6" />
