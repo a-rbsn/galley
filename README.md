@@ -18,9 +18,12 @@ body text, a restrained sans for metadata.
 
 ## Status
 
-Early. The interface design is settled and lives as static mocks under
-`mock/`. The SvelteKit application is being built out from those mocks.
-Expect rough edges and missing views.
+Feature-complete for personal use. Front page, individual subreddits,
+post threads with full comment trees (including expanding "load more"
+branches), inline image / gallery / video / HLS playback, a setup flow
+for new instances, an installable PWA manifest, and a stale-while-
+revalidate response cache that survives restarts. The original static
+mocks still live under `mock/` for reference.
 
 ## Architecture
 
@@ -60,7 +63,9 @@ their browser.
 There is no logged-in account, so Galley does not pull a *subscribed*
 list from Reddit. Instead, each instance of Galley keeps its own list
 of subreddits the reader has chosen to follow, configured through the
-settings page and stored in the browser's local storage.
+settings page and stored server-side in the instance config file
+alongside the Reddit username (the same `/data/config.json` the setup
+flow writes). Anyone visiting the instance sees the same list.
 
 This is the substance of Galley as a reader: a small, curated set of
 subreddits, edited by hand, displayed as one merged feed and as
