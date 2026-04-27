@@ -3,24 +3,72 @@
 	import PostListItem from '$lib/components/PostListItem.svelte';
 	import FeedHeader from '$lib/components/FeedHeader.svelte';
 	import { addSub, subsState } from '$lib/stores/subs.svelte';
+	import type { PostView } from '$lib/types';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
 	const sortHref = (s: 'hot' | 'new' | 'top' | 'rising') => {
 		const u = new URL(page.url);
-		u.searchParams.delete('after');
 		if (s === 'hot') u.searchParams.delete('sort');
 		else u.searchParams.set('sort', s);
 		return u.pathname + (u.search || '');
 	};
 
-	const moreHref = $derived.by(() => {
-		if (!data.after) return null;
-		const u = new URL(page.url);
-		u.searchParams.set('after', data.after);
-		return u.pathname + (u.search || '');
+	let extraPosts = $state<PostView[]>([]);
+	let extraErrors = $state<{ sub: string; message: string }[]>([]);
+	// svelte-ignore state_referenced_locally
+	let after = $state<string | null>(data.after);
+	// svelte-ignore state_referenced_locally
+	let lastData = data;
+	let loading = $state(false);
+
+	$effect(() => {
+		if (data !== lastData) {
+			lastData = data;
+			extraPosts = [];
+			extraErrors = [];
+			after = data.after;
+		}
 	});
+
+	const allPosts = $derived([...data.posts, ...extraPosts]);
+
+	async function loadMore() {
+		if (loading || after === null) return;
+		loading = true;
+		try {
+			const res = await fetch('/api/feed', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ sort: data.sort, afters: { [data.sub]: after } })
+			});
+			if (!res.ok) {
+				extraErrors = [
+					...extraErrors,
+					{ sub: data.sub, message: `Load more failed (${res.status}).` }
+				];
+				return;
+			}
+			const body = (await res.json()) as {
+				posts: PostView[];
+				afters: Record<string, string | null>;
+				errors: { sub: string; message: string }[];
+			};
+			const seen = new Set(allPosts.map((p) => p.id));
+			const fresh = body.posts.filter((p) => !seen.has(p.id));
+			extraPosts = [...extraPosts, ...fresh];
+			after = body.afters[data.sub] ?? null;
+			if (body.errors.length > 0) {
+				extraErrors = [...extraErrors, ...body.errors];
+			}
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : 'network error';
+			extraErrors = [...extraErrors, { sub: data.sub, message: msg }];
+		} finally {
+			loading = false;
+		}
+	}
 
 	const inFeed = $derived(subsState.list.includes(data.sub));
 	// Suppress the button until the client store has hydrated, otherwise SSR
@@ -61,18 +109,28 @@
 		{/snippet}
 	</FeedHeader>
 
-	{#if data.posts.length === 0}
+	{#if extraErrors.length > 0}
+		<div class="errors">
+			{#each extraErrors as err, i (i + ':' + err.sub)}
+				<p><em>r/{err.sub} couldn't be loaded — {err.message}</em></p>
+			{/each}
+		</div>
+	{/if}
+
+	{#if allPosts.length === 0}
 		<p class="empty">
 			<em>No posts came back from Reddit for r/{data.sub} ({data.sort}).</em>
 		</p>
 	{:else}
-		{#each data.posts as post (post.id)}
+		{#each allPosts as post (post.id)}
 			<PostListItem {post} />
 		{/each}
 
-		{#if moreHref}
+		{#if after !== null}
 			<p class="more">
-				<a href={moreHref}>Load more ↓</a>
+				<button type="button" onclick={loadMore} disabled={loading}>
+					{loading ? 'Loading…' : 'Load more ↓'}
+				</button>
 			</p>
 		{/if}
 	{/if}
@@ -110,6 +168,17 @@
 		color: var(--ink-3);
 		padding: 22px 0;
 	}
+	.errors {
+		font-family: var(--serif);
+		color: var(--ink-3);
+		font-size: 13px;
+		padding: 8px 0 14px;
+		border-bottom: 1px dashed var(--rule);
+		margin-bottom: 14px;
+	}
+	.errors p {
+		margin: 2px 0;
+	}
 	.more {
 		text-align: center;
 		margin: 28px 0 12px;
@@ -118,15 +187,25 @@
 		letter-spacing: 0.16em;
 		text-transform: uppercase;
 	}
-	.more a {
+	.more button {
+		background: none;
+		border: none;
+		padding: 0 0 2px;
+		font: inherit;
+		letter-spacing: inherit;
+		text-transform: inherit;
 		color: var(--ink-2);
-		text-decoration: none;
 		border-bottom: 1px solid var(--ink-3);
-		padding-bottom: 2px;
+		cursor: pointer;
 	}
-	.more a:hover {
+	.more button:hover:not(:disabled) {
 		color: var(--accent);
 		border-bottom-color: var(--accent);
+	}
+	.more button:disabled {
+		color: var(--ink-4);
+		border-bottom-color: var(--ink-4);
+		cursor: default;
 	}
 	@media (max-width: 760px) {
 		.feed {
@@ -134,6 +213,7 @@
 			padding-top: 0;
 		}
 		.feed > .empty,
+		.feed > .errors,
 		.feed > .more {
 			padding-left: var(--page-pad-x-mobile);
 			padding-right: var(--page-pad-x-mobile);

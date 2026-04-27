@@ -255,6 +255,9 @@
 		font-size: 15.5px;
 		line-height: 1.5;
 		color: var(--ink);
+		/* Long bare URLs in comments would otherwise force the comment column to
+		   widen past the page container on mobile. */
+		overflow-wrap: anywhere;
 	}
 	.body :global(p) {
 		margin: 0 0 8px;

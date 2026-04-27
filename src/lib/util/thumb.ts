@@ -42,15 +42,24 @@ export function pickPreview(post: PostView, minWidth: number): string | undefine
 }
 
 /**
- * The largest reasonable image to show on the thread page. Prefers the
- * post's direct image URL when it points straight at a file, then the
- * largest preview Reddit pre-generated.
+ * The largest reasonable image to show on the thread page. Prefers a Reddit
+ * preview around 1080px wide — full source images can be 4–10 MB and slow to
+ * load on mobile, while a ~1080px preview is indistinguishable on screen.
+ * Falls back to source URL or thumbnail if no suitable preview exists.
  */
+const HERO_TARGET_WIDTH = 1080;
+
 export function pickHero(post: PostView): string | undefined {
+	const imgs = post.previewImages;
+	if (imgs && imgs.length > 0) {
+		// Smallest preview at least as wide as our target; if none reach the
+		// target, the largest preview Reddit generated (still capped well below
+		// most originals).
+		const m = imgs.find((r) => r.width >= HERO_TARGET_WIDTH) ?? imgs[imgs.length - 1];
+		return m.url;
+	}
 	if (post.url && IMAGE_EXT.test(post.url) && /^https?:/.test(post.url)) {
 		return post.url;
 	}
-	const imgs = post.previewImages;
-	if (imgs && imgs.length > 0) return imgs[imgs.length - 1].url;
 	return isUsableThumb(post.thumbnail) ? post.thumbnail : undefined;
 }

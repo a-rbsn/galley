@@ -22,15 +22,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 	const sortParam = url.searchParams.get('sort');
 	const sort: Sort = isSort(sortParam) ? sortParam : 'hot';
-	const after = url.searchParams.get('after');
 
-	const qs = new URLSearchParams({ limit: '25' });
-	if (after) qs.set('after', after);
-
-	const path = `/r/${sub.toLowerCase()}/${sort}?${qs}`;
+	const path = `/r/${sub.toLowerCase()}/${sort}?limit=25`;
 
 	try {
-		const data = await redditJson<Listing<RawPost>>(path, { ttl: 300 });
+		const data = await redditJson<Listing<RawPost>>(path, { ttl: 60 });
 		const posts = data.data.children
 			.filter((c): c is RawPost => c.kind === 't3')
 			.map(rawPostToView);
@@ -38,8 +34,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 			sub: sub.toLowerCase(),
 			sort,
 			posts,
-			after: data.data.after,
-			before: data.data.before
+			after: data.data.after
 		};
 	} catch (e) {
 		if (e instanceof RedditError) {

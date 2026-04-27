@@ -20,6 +20,7 @@
 	let videoEl: HTMLVideoElement | undefined = $state();
 	let teardown: (() => void) | undefined;
 	let mode: 'native-hls' | 'hls.js' | 'mp4' | 'none' = $state('none');
+	let hasPlayed = $state(false);
 
 	async function attach() {
 		if (!videoEl) return;
@@ -86,7 +87,27 @@
 		{poster}
 		style:aspect-ratio={aspect ?? '16 / 9'}
 		onclick={togglePlay}
+		onplay={() => (hasPlayed = true)}
+		onended={() => (hasPlayed = false)}
 	></video>
+	{#if !isGif && !hasPlayed}
+		<!-- Mimics the native pre-play overlay mobile browsers render but desktop
+		     ones don't. We make this the click target directly rather than
+		     passing through to the video — the video's own click handler plus
+		     the browser's built-in click-to-play on <video controls> can fight
+		     each other. -->
+		<button
+			type="button"
+			class="play-overlay"
+			aria-label="Play video"
+			onclick={() => void videoEl?.play()}
+		>
+			<svg viewBox="0 0 64 64" width="64" height="64" aria-hidden="true">
+				<circle cx="32" cy="32" r="30" fill="rgba(0,0,0,0.55)" />
+				<path d="M26 20 L46 32 L26 44 Z" fill="white" />
+			</svg>
+		</button>
+	{/if}
 	{#if mode === 'mp4' && !isGif}
 		<p class="note">
 			<em>Inline playback is video-only. <a href={src} target="_blank" rel="noopener noreferrer"
@@ -108,6 +129,27 @@
 		background: var(--ink);
 		object-fit: contain;
 		cursor: pointer;
+	}
+	.play-overlay {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		background: none;
+		border: 0;
+		padding: 0;
+		cursor: pointer;
+		filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+	}
+	.play-overlay svg {
+		display: block;
+	}
+	/* Mobile browsers render their own centered play button on <video> before
+	   first play; ours would stack on top of theirs. Hide on touch devices. */
+	@media (hover: none) and (pointer: coarse) {
+		.play-overlay {
+			display: none;
+		}
 	}
 	.note {
 		font-family: var(--serif);

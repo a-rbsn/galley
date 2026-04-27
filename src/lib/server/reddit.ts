@@ -436,18 +436,38 @@ function formatDuration(seconds: number): string {
 	return `${m}:${s}`;
 }
 
+const GALLERY_TARGET_WIDTH = 1080;
+
 function pickGalleryItems(d: RawPostData): PostView['galleryItems'] {
 	if (!d.is_gallery || !d.gallery_data || !d.media_metadata) return undefined;
 	const items = d.gallery_data.items
 		.map((item) => {
 			const m = d.media_metadata?.[item.media_id];
 			if (!m?.s) return null;
-			const url = (m.s.u ?? m.s.gif ?? '').replace(/&amp;/g, '&');
+			// Prefer the smallest p[] preview at least 1080px wide; fall back to
+			// the largest preview, then the source. Animations (gifs) don't have
+			// a useful preview so they always use the source.
+			const sourceUrl = (m.s.u ?? m.s.gif ?? '').replace(/&amp;/g, '&');
+			const previews = (m.p ?? [])
+				.filter((p) => p && typeof p.u === 'string')
+				.sort((a, b) => a.x - b.x);
+			const isAnimated = !!m.s.gif && !m.s.u;
+			let url = sourceUrl;
+			let width = m.s.x ?? 0;
+			let height = m.s.y ?? 0;
+			if (!isAnimated && previews.length > 0) {
+				const pick =
+					previews.find((p) => p.x >= GALLERY_TARGET_WIDTH) ??
+					previews[previews.length - 1];
+				url = pick.u.replace(/&amp;/g, '&');
+				width = pick.x;
+				height = pick.y;
+			}
 			if (!url) return null;
 			return {
 				url,
-				width: m.s.x ?? 0,
-				height: m.s.y ?? 0,
+				width,
+				height,
 				caption: item.caption
 			};
 		})

@@ -70,6 +70,20 @@
 		align-items: stretch;
 		position: relative;
 	}
+	/* Stretched-link overlay: the title anchor expands to cover the whole
+	   article so a tap anywhere on the row goes to the post. The kicker links
+	   below sit above this overlay via z-index. */
+	.title a::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+	}
+	.kicker,
+	.thumb {
+		position: relative;
+		z-index: 1;
+	}
 	.entry.no-thumb {
 		grid-template-columns: 1fr;
 	}

@@ -1,9 +1,46 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Thread from '$lib/components/Thread.svelte';
 	import CommentsList from '$lib/components/CommentsList.svelte';
+	import type { CommentView, MoreCommentsView } from '$lib/types';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	type Result =
+		| { status: 'loading' }
+		| { status: 'ok'; comments: Array<CommentView | MoreCommentsView> }
+		| { status: 'error'; message: string };
+
+	let result = $state<Result>({ status: 'loading' });
+
+	// Fetch comments on the client after the page itself has loaded. Keeping
+	// this off the server response means the navigation stream closes once the
+	// post is rendered, so back-navigation is not held open by an in-flight
+	// streamed Promise.
+	onMount(() => {
+		const ctrl = new AbortController();
+		(async () => {
+			try {
+				const res = await fetch(`/api/comments/${data.sub}/${data.id}`, {
+					signal: ctrl.signal
+				});
+				const body = (await res.json()) as
+					| { ok: true; comments: Array<CommentView | MoreCommentsView> }
+					| { ok: false; error: string };
+				if (body.ok) {
+					result = { status: 'ok', comments: body.comments };
+				} else {
+					result = { status: 'error', message: body.error };
+				}
+			} catch (e) {
+				if (e instanceof Error && e.name === 'AbortError') return;
+				const message = e instanceof Error ? e.message : 'Failed to load comments';
+				result = { status: 'error', message };
+			}
+		})();
+		return () => ctrl.abort();
+	});
 </script>
 
 <svelte:head>
@@ -19,15 +56,13 @@
 			: 's'}
 	</h2>
 
-	{#await data.comments}
+	{#if result.status === 'loading'}
 		<p class="loading"><em>Loading comments…</em></p>
-	{:then result}
-		{#if result.ok}
-			<CommentsList initial={result.comments} sub={data.sub} postId={data.id} />
-		{:else}
-			<p class="error"><em>{result.error}</em></p>
-		{/if}
-	{/await}
+	{:else if result.status === 'ok'}
+		<CommentsList initial={result.comments} sub={data.sub} postId={data.id} />
+	{:else}
+		<p class="error"><em>{result.message}</em></p>
+	{/if}
 </section>
 
 <style>

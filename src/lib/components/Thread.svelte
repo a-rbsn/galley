@@ -281,6 +281,7 @@
 		line-height: 1.55;
 		color: var(--ink);
 		max-width: 64ch;
+		overflow-wrap: anywhere;
 	}
 	.selftext :global(p) {
 		margin: 0 0 14px;
