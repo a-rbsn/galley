@@ -138,7 +138,9 @@ export function renderMarkdown(body: string | undefined | null): string {
 	}
 	const html = marked.parse(body, { async: false }) as string;
 	const sanitised = DOMPurify.sanitize(html, PURIFY_CONFIG);
-	const out = autoEmbedImages(sanitised);
+	// autoEmbedImages constructs a small amount of markup after the first
+	// sanitisation pass, so treat that generated HTML as untrusted too.
+	const out = DOMPurify.sanitize(autoEmbedImages(sanitised), PURIFY_CONFIG);
 	renderCache.set(body, out);
 	if (renderCache.size > RENDER_CACHE_MAX) {
 		const oldest = renderCache.keys().next().value;

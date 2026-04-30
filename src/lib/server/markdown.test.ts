@@ -38,6 +38,14 @@ describe('renderMarkdown', () => {
 		expect(html).toContain('alt="here"');
 	});
 
+	it('sanitises attributes introduced while embedding image links', () => {
+		const html = renderMarkdown('[hello " onerror="alert(1)](https://i.imgur.com/x.png)');
+		expect(html).toContain('<figure class="image-embed">');
+		expect(html).toContain('<img src="https://i.imgur.com/x.png"');
+		expect(html).not.toContain('onerror');
+		expect(html).not.toContain('alert(1)');
+	});
+
 	it('keeps inline image links as plain anchors', () => {
 		const html = renderMarkdown('See [this](https://i.redd.it/x.jpg) for context.');
 		expect(html).not.toContain('<figure');

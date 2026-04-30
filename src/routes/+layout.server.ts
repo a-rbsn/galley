@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from './$types';
-import { getSubreddits, setSubreddits } from '$lib/server/config';
+import { getCustomFeeds, getSubreddits, setSubreddits } from '$lib/server/config';
 
 const LEGACY_COOKIE = 'galley_subs';
 
@@ -31,5 +31,5 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 		}
 	}
 
-	return { subs };
+	return { subs, feeds: getCustomFeeds() };
 };

@@ -9,6 +9,7 @@
 	import SubList from '$lib/components/SubList.svelte';
 	import Colophon from '$lib/components/Colophon.svelte';
 	import { hydrateSubs } from '$lib/stores/subs.svelte';
+	import { hydrateSeen } from '$lib/stores/seen.svelte';
 	import type { LayoutData } from './$types';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
@@ -20,6 +21,11 @@
 
 	onMount(() => {
 		hydrateSubs(data.subs);
+		hydrateSeen();
+
+		if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+			void navigator.serviceWorker.register('/service-worker.js');
+		}
 
 		const masthead = document.querySelector('.masthead');
 		if (!masthead) return;
@@ -46,10 +52,10 @@
 	</main>
 {:else}
 	<Masthead />
-	<SectionBar subs={data.subs} />
+	<SectionBar subs={data.subs} feeds={data.feeds} />
 
 	<main class="page">
-		<SubList subs={data.subs} />
+		<SubList subs={data.subs} feeds={data.feeds} />
 		<section class="content">
 			{@render children()}
 		</section>

@@ -1,18 +1,29 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { invalidateAll } from '$app/navigation';
+	import { beforeNavigate, invalidateAll } from '$app/navigation';
+	import { onDestroy } from 'svelte';
 	import AddSubreddit from '$lib/components/AddSubreddit.svelte';
 	import PostListItem from '$lib/components/PostListItem.svelte';
 	import FeedHeader from '$lib/components/FeedHeader.svelte';
+	import { isSeen, seenState } from '$lib/stores/seen.svelte';
+	import type { Sort, TopRange } from '$lib/feed';
 	import type { PostView } from '$lib/types';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
 
-	const sortHref = (s: 'hot' | 'new' | 'top' | 'rising') => {
+	const sortHref = (s: Sort) => {
 		const u = new URL(page.url);
 		if (s === 'hot') u.searchParams.delete('sort');
 		else u.searchParams.set('sort', s);
+		if (s !== 'top') u.searchParams.delete('t');
+		return u.pathname + (u.search || '');
+	};
+
+	const topRangeHref = (range: TopRange) => {
+		const u = new URL(page.url);
+		u.searchParams.set('sort', 'top');
+		u.searchParams.set('t', range);
 		return u.pathname + (u.search || '');
 	};
 
@@ -25,6 +36,20 @@
 	// svelte-ignore state_referenced_locally
 	let lastData = data;
 	let loading = $state(false);
+	let loadMoreController: AbortController | null = null;
+
+	function abortLoadMore() {
+		loadMoreController?.abort();
+		loadMoreController = null;
+	}
+
+	beforeNavigate(() => {
+		abortLoadMore();
+	});
+
+	onDestroy(() => {
+		abortLoadMore();
+	});
 
 	$effect(() => {
 		if (data !== lastData) {
@@ -36,17 +61,23 @@
 	});
 
 	const allPosts = $derived([...data.posts, ...extraPosts]);
+	const visiblePosts = $derived(
+		seenState.hydrated && seenState.hideSeen ? allPosts.filter((p) => !isSeen(p.id)) : allPosts
+	);
 	const allErrors = $derived([...data.errors, ...extraErrors]);
 	const canLoadMore = $derived(Object.values(afters).some((a) => a !== null));
 
 	async function loadMore() {
 		if (loading || !canLoadMore) return;
 		loading = true;
+		const ctrl = new AbortController();
+		loadMoreController = ctrl;
 		try {
 			const res = await fetch('/api/feed', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ sort: data.sort, afters })
+				body: JSON.stringify({ sort: data.sort, topRange: data.topRange, afters }),
+				signal: ctrl.signal
 			});
 			if (!res.ok) {
 				extraErrors = [
@@ -68,9 +99,11 @@
 				extraErrors = [...extraErrors, ...body.errors];
 			}
 		} catch (e) {
+			if (e instanceof Error && e.name === 'AbortError') return;
 			const msg = e instanceof Error ? e.message : 'network error';
 			extraErrors = [...extraErrors, { sub: '·', message: msg }];
 		} finally {
+			if (loadMoreController === ctrl) loadMoreController = null;
 			loading = false;
 		}
 	}
@@ -99,7 +132,14 @@
 		</div>
 	{:else}
 		<div class="feed">
-			<FeedHeader title="Front page" count={allPosts.length} sort={data.sort} {sortHref} />
+			<FeedHeader
+				title="Front page"
+				count={visiblePosts.length}
+				sort={data.sort}
+				topRange={data.topRange}
+				{sortHref}
+				{topRangeHref}
+			/>
 
 			{#if allErrors.length > 0}
 				<div class="errors">
@@ -111,13 +151,17 @@
 				</div>
 			{/if}
 
-			{#each allPosts as post (post.id)}
-				<PostListItem {post} />
+			{#each visiblePosts as post (post.id)}
+				<PostListItem {post} seen={isSeen(post.id)} />
 			{/each}
 
-			{#if allPosts.length === 0 && allErrors.length === 0}
+			{#if visiblePosts.length === 0 && allErrors.length === 0}
 				<p class="empty">
-					<em>No posts came back from Reddit for this combination of subreddits and sort.</em>
+					<em>
+						{allPosts.length > 0
+							? 'All loaded posts are marked read.'
+							: 'No posts came back from Reddit for this combination of subreddits and sort.'}
+					</em>
 				</p>
 			{/if}
 

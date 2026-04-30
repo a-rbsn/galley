@@ -59,3 +59,9 @@ export interface MoreCommentsView {
 	children: string[];
 	kind: 'more';
 }
+
+export interface CustomFeedView {
+	id: string;
+	name: string;
+	subreddits: string[];
+}

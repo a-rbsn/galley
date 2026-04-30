@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import type { CustomFeedView } from '$lib/types';
 
-	let { subs }: { subs: string[] } = $props();
+	let { subs, feeds = [] }: { subs: string[]; feeds?: CustomFeedView[] } = $props();
 
 	const path = $derived(page.url.pathname);
 	const activeSub = $derived.by(() => {
 		const m = path.match(/^\/r\/([^/]+)/);
+		return m ? m[1].toLowerCase() : null;
+	});
+	const activeFeed = $derived.by(() => {
+		const m = path.match(/^\/f\/([^/]+)/);
 		return m ? m[1].toLowerCase() : null;
 	});
 </script>
@@ -22,6 +27,19 @@
 			</li>
 		</ul>
 	</div>
+
+	{#if feeds.length > 0}
+		<div class="rail-group">
+			<h4>Custom feeds</h4>
+			<ul>
+				{#each feeds as feed (feed.id)}
+					<li class:active={activeFeed === feed.id}>
+						<a href="/f/{feed.id}" class="rail-name">{feed.name}</a>
+					</li>
+				{/each}
+			</ul>
+		</div>
+	{/if}
 
 	{#if subs.length > 0}
 		<div class="rail-group">

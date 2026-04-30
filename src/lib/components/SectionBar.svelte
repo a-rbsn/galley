@@ -1,11 +1,16 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import type { CustomFeedView } from '$lib/types';
 
-	let { subs }: { subs: string[] } = $props();
+	let { subs, feeds = [] }: { subs: string[]; feeds?: CustomFeedView[] } = $props();
 
 	const path = $derived(page.url.pathname);
 	const activeSub = $derived.by(() => {
 		const m = path.match(/^\/r\/([^/]+)/);
+		return m ? m[1].toLowerCase() : null;
+	});
+	const activeFeed = $derived.by(() => {
+		const m = path.match(/^\/f\/([^/]+)/);
 		return m ? m[1].toLowerCase() : null;
 	});
 </script>
@@ -13,6 +18,12 @@
 <nav class="sectionbar" aria-label="Sections">
 	<div class="sectionbar-inner">
 		<a href="/" class:active={path === '/'}>Front Page</a>
+		{#if feeds.length > 0}
+			<span class="sep">●</span>
+			{#each feeds as feed (feed.id)}
+				<a href="/f/{feed.id}" class:active={activeFeed === feed.id}>{feed.name}</a>
+			{/each}
+		{/if}
 		{#if subs.length > 0}
 			<span class="sep">●</span>
 			{#each subs as sub (sub)}

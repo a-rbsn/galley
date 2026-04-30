@@ -1,20 +1,24 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { rangeLabel, SORTS, TOP_RANGES, type Sort, type TopRange } from '$lib/feed';
 
 	let {
 		title,
 		count,
 		sort,
+		topRange,
 		sortHref,
+		topRangeHref,
 		titleAction
 	}: {
 		title?: string;
 		count?: number;
-		sort: 'hot' | 'new' | 'top' | 'rising';
-		sortHref: (s: 'hot' | 'new' | 'top' | 'rising') => string;
+		sort: Sort;
+		topRange?: TopRange;
+		sortHref: (s: Sort) => string;
+		topRangeHref?: (range: TopRange) => string;
 		titleAction?: Snippet;
 	} = $props();
-	const sorts: Array<'hot' | 'new' | 'top' | 'rising'> = ['hot', 'new', 'top', 'rising'];
 </script>
 
 <div class="feed-header">
@@ -27,13 +31,24 @@
 		{/if}
 		{#if titleAction}{@render titleAction()}{/if}
 	</h2>
-	<nav class="feed-sort" aria-label="Sort">
-		{#each sorts as s (s)}
-			<a href={sortHref(s)} class:active={sort === s}>
-				{s.charAt(0).toUpperCase() + s.slice(1)}
-			</a>
-		{/each}
-	</nav>
+	<div class="feed-controls">
+		<nav class="feed-sort" aria-label="Sort">
+			{#each SORTS as s (s)}
+				<a href={sortHref(s)} class:active={sort === s}>
+					{s.charAt(0).toUpperCase() + s.slice(1)}
+				</a>
+			{/each}
+		</nav>
+		{#if sort === 'top' && topRange && topRangeHref}
+			<nav class="range-sort" aria-label="Top time range">
+				{#each TOP_RANGES as range (range)}
+					<a href={topRangeHref(range)} class:active={topRange === range}>
+						{rangeLabel(range)}
+					</a>
+				{/each}
+			</nav>
+		{/if}
+	</div>
 </div>
 
 <style>
@@ -64,7 +79,14 @@
 		font-style: normal;
 		margin-right: 4px;
 	}
-	.feed-sort {
+	.feed-controls {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 7px;
+	}
+	.feed-sort,
+	.range-sort {
 		font-family: var(--sans);
 		font-size: 11px;
 		letter-spacing: 0.1em;
@@ -73,16 +95,25 @@
 		display: flex;
 		gap: 14px;
 	}
-	.feed-sort a {
+	.range-sort {
+		font-size: 9.5px;
+		letter-spacing: 0.14em;
+		color: var(--ink-4);
+		gap: 10px;
+	}
+	.feed-sort a,
+	.range-sort a {
 		color: inherit;
 		text-decoration: none;
 	}
-	.feed-sort a.active {
+	.feed-sort a.active,
+	.range-sort a.active {
 		color: var(--ink);
 		border-bottom: 1px solid var(--ink);
 		padding-bottom: 2px;
 	}
-	.feed-sort a:hover {
+	.feed-sort a:hover,
+	.range-sort a:hover {
 		color: var(--ink);
 	}
 
@@ -101,12 +132,20 @@
 		.feed-title .count {
 			margin-right: 2px;
 		}
-		.feed-sort {
+		.feed-controls {
+			gap: 4px;
+		}
+		.feed-sort,
+		.range-sort {
 			font-size: 9.5px;
 			letter-spacing: 0.14em;
 			gap: 10px;
 		}
-		.feed-sort a.active {
+		.range-sort {
+			font-size: 8.5px;
+		}
+		.feed-sort a.active,
+		.range-sort a.active {
 			border-bottom: none;
 			padding-bottom: 0;
 		}

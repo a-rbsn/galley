@@ -2,8 +2,9 @@
 	import type { PostView } from '$lib/types';
 	import PostMeta from './PostMeta.svelte';
 	import { placeholderBg, pickPreview } from '$lib/util/thumb';
+	import { markSeen } from '$lib/stores/seen.svelte';
 
-	let { post }: { post: PostView } = $props();
+	let { post, seen = false }: { post: PostView; seen?: boolean } = $props();
 
 	const hasThumb = $derived(
 		post.kind === 'image' || post.kind === 'video' || post.kind === 'gallery'
@@ -14,7 +15,7 @@
 	const fallbackBg = $derived(placeholderBg(post.hueSeed ?? post.subreddit));
 </script>
 
-<article class="entry" class:no-thumb={!hasThumb} class:pinned={post.isPinned}>
+<article class="entry" class:no-thumb={!hasThumb} class:pinned={post.isPinned} class:seen>
 	<div class="body">
 		<div class="kicker">
 			<a class="sub" href="/r/{post.subreddit}">r/{post.subreddit}</a>
@@ -26,7 +27,11 @@
 		</div>
 
 		<h2 class="title">
-			<a href={post.permalink} data-sveltekit-preload-data="hover">{post.title}</a>
+			<a
+				href={post.permalink}
+				data-sveltekit-preload-data="hover"
+				onclick={() => markSeen(post.id)}
+			>{post.title}</a>
 		</h2>
 
 		<PostMeta {post} />
@@ -39,6 +44,7 @@
 			data-sveltekit-preload-data="hover"
 			aria-hidden="true"
 			tabindex="-1"
+			onclick={() => markSeen(post.id)}
 		>
 			{#if realThumb}
 				<img class="thumb-img" src={realThumb} alt="" loading="lazy" referrerpolicy="no-referrer" />
@@ -69,6 +75,7 @@
 		border-bottom: 1px solid var(--rule);
 		align-items: stretch;
 		position: relative;
+		-webkit-tap-highlight-color: transparent;
 	}
 	/* Stretched-link overlay: the title anchor expands to cover the whole
 	   article so a tap anywhere on the row goes to the post. The kicker links
@@ -153,6 +160,7 @@
 		color: var(--ink);
 		text-decoration: none;
 		transition: color 0.15s;
+		-webkit-tap-highlight-color: transparent;
 	}
 
 	.thumb {
@@ -164,6 +172,7 @@
 		overflow: hidden;
 		display: block;
 		flex-shrink: 0;
+		-webkit-tap-highlight-color: transparent;
 	}
 	img.thumb-img {
 		position: absolute;
@@ -224,6 +233,18 @@
 	}
 	.entry.pinned .title {
 		font-style: italic;
+	}
+	.entry.seen .title a {
+		color: var(--ink-3);
+	}
+	.entry.seen .thumb {
+		opacity: 0.62;
+	}
+	.entry.seen .kicker::after {
+		content: 'Read';
+		color: var(--ink-4);
+		font-weight: 500;
+		letter-spacing: 0.12em;
 	}
 
 	@media (max-width: 760px) {

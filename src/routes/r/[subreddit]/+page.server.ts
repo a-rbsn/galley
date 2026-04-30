@@ -7,14 +7,9 @@ import {
 	type Listing,
 	type RawPost
 } from '$lib/server/reddit';
+import { DEFAULT_TOP_RANGE, isSort, isTopRange, type Sort, type TopRange } from '$lib/feed';
 
-export type Sort = 'hot' | 'new' | 'top' | 'rising';
-
-function isSort(s: string | null): s is Sort {
-	return s === 'hot' || s === 'new' || s === 'top' || s === 'rising';
-}
-
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load: PageServerLoad = async ({ params, url, request }) => {
 	const sub = params.subreddit;
 	if (!/^[a-z0-9_]{2,21}$/i.test(sub)) {
 		error(400, `Not a valid subreddit name: ${sub}`);
@@ -22,17 +17,26 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 	const sortParam = url.searchParams.get('sort');
 	const sort: Sort = isSort(sortParam) ? sortParam : 'hot';
+	const topRangeParam = url.searchParams.get('t');
+	const topRange: TopRange = isTopRange(topRangeParam) ? topRangeParam : DEFAULT_TOP_RANGE;
 
-	const path = `/r/${sub.toLowerCase()}/${sort}?limit=25`;
+	const path = `/r/${sub.toLowerCase()}/${sort}?${new URLSearchParams({
+		limit: '25',
+		...(sort === 'top' ? { t: topRange } : {})
+	}).toString()}`;
 
 	try {
-		const data = await redditJson<Listing<RawPost>>(path, { ttl: 60 });
+		const data = await redditJson<Listing<RawPost>>(path, {
+			ttl: 60,
+			signal: request.signal
+		});
 		const posts = data.data.children
 			.filter((c): c is RawPost => c.kind === 't3')
 			.map(rawPostToView);
 		return {
 			sub: sub.toLowerCase(),
 			sort,
+			topRange,
 			posts,
 			after: data.data.after
 		};

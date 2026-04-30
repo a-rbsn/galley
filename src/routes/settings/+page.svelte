@@ -16,18 +16,18 @@
 	);
 	const usernameSaved = $derived(form && 'saved' in form && form.saved);
 	const usernameError = $derived(form && 'error' in form ? (form.error as string) : null);
+	const feedError = $derived(form && 'feedError' in form ? (form.feedError as string) : null);
+	const feedNameValue = $derived(form && 'feedName' in form ? (form.feedName as string) : '');
 
 	let dragIndex = $state<number | null>(null);
 	let dropIndex = $state<number | null>(null);
 
 	async function handleRemove(name: string) {
-		await removeSub(name);
-		void invalidateAll();
+		if (await removeSub(name)) void invalidateAll();
 	}
 
 	async function handleMove(name: string, dir: -1 | 1) {
-		await moveSub(name, dir);
-		void invalidateAll();
+		if (await moveSub(name, dir)) void invalidateAll();
 	}
 
 	function handleDragStart(e: DragEvent, i: number) {
@@ -52,8 +52,7 @@
 		dragIndex = null;
 		dropIndex = null;
 		if (from === i) return;
-		await reorderSub(from, i);
-		void invalidateAll();
+		if (await reorderSub(from, i)) void invalidateAll();
 	}
 
 	function handleDragEnd() {
@@ -81,6 +80,9 @@
 				<em>No subreddits yet. Add one below to start populating the front page.</em>
 			</p>
 		{:else}
+			{#if subsState.error}
+				<p class="save-error">{subsState.error}</p>
+			{/if}
 			<ol class="sub-list">
 				{#each displayed as sub, i (sub)}
 					<li
@@ -135,6 +137,65 @@
 	</section>
 
 	<section class="block">
+		<h2>Custom feeds</h2>
+		<p class="lede">
+			Group your followed subreddits into smaller front pages. Each custom feed uses the same
+			balanced ranking as the main front page.
+		</p>
+
+		{#if data.customFeeds.length > 0}
+			<ul class="feed-list">
+				{#each data.customFeeds as feed (feed.id)}
+					<li>
+						<a class="feed-name" href="/f/{feed.id}">{feed.name}</a>
+						<span class="feed-subs">
+							{feed.subreddits.map((sub) => `r/${sub}`).join(', ')}
+						</span>
+						<form method="POST" action="?/deleteFeed">
+							<input type="hidden" name="id" value={feed.id} />
+							<button type="submit">Remove</button>
+						</form>
+					</li>
+				{/each}
+			</ul>
+		{:else}
+			<p class="empty"><em>No custom feeds yet.</em></p>
+		{/if}
+
+		<form method="POST" action="?/createFeed" class="feed-form">
+			<label class="feed-name-field">
+				<span>Name</span>
+				<input
+					name="name"
+					type="text"
+					value={feedNameValue}
+					placeholder="Design, News, Weekend"
+					required
+				/>
+			</label>
+
+			{#if displayed.length > 0}
+				<div class="feed-picker" aria-label="Choose subreddits">
+					{#each displayed as sub (sub)}
+						<label>
+							<input type="checkbox" name="subs" value={sub} />
+							<span>r/{sub}</span>
+						</label>
+					{/each}
+				</div>
+			{:else}
+				<p class="empty"><em>Add subreddits before creating a custom feed.</em></p>
+			{/if}
+
+			{#if feedError}
+				<p class="form-error">{feedError}</p>
+			{/if}
+
+			<button type="submit" disabled={displayed.length === 0}>Create feed</button>
+		</form>
+	</section>
+
+	<section class="block">
 		<h2>Reddit identity</h2>
 		<p class="lede">
 			Galley sends a User-Agent like <code>web:io.galley.app:v0.1.0 (by /u/your-name)</code>
@@ -177,8 +238,8 @@
 		<h2>About</h2>
 		<p class="prose">
 			Galley reads Reddit through the public <code>.json</code> endpoints. Nothing is mirrored or
-			stored on the server beyond a brief in-memory cache to keep request counts down. Your list
-			of subreddits lives in this browser.
+			stored on the server beyond a response cache to keep request counts down. Your list of
+			subreddits lives in this instance's server config file.
 		</p>
 		<p class="prose">
 			There is no account, no voting, no commenting, no submitting. Galley is read-only by design.
@@ -228,6 +289,13 @@
 		font-family: var(--serif);
 		color: var(--ink-3);
 		font-size: 14px;
+	}
+	.save-error {
+		font-family: var(--serif);
+		color: var(--accent-deep);
+		font-size: 14px;
+		font-style: italic;
+		margin: 0 0 10px;
 	}
 
 	.sub-list {
@@ -322,6 +390,107 @@
 	}
 	.remove:hover {
 		color: var(--accent-deep);
+	}
+
+	.feed-list {
+		list-style: none;
+		padding: 0;
+		margin: 0 0 18px;
+		border-top: 1px solid var(--rule);
+	}
+	.feed-list li {
+		display: grid;
+		grid-template-columns: minmax(120px, 0.35fr) minmax(0, 1fr) auto;
+		align-items: baseline;
+		gap: 14px;
+		padding: 8px 0;
+		border-bottom: 1px solid var(--rule);
+	}
+	.feed-name {
+		font-family: var(--serif);
+		font-size: 17px;
+		color: var(--ink);
+		text-decoration: none;
+	}
+	.feed-name:hover {
+		color: var(--accent);
+	}
+	.feed-subs {
+		font-family: var(--serif);
+		font-style: italic;
+		font-size: 13px;
+		color: var(--ink-3);
+		overflow-wrap: anywhere;
+	}
+	.feed-list form {
+		margin: 0;
+	}
+	.feed-list button,
+	.feed-form button {
+		background: transparent;
+		border: none;
+		color: var(--ink-3);
+		cursor: pointer;
+		padding: 0;
+		font-family: var(--sans);
+		font-size: 11px;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+	.feed-list button:hover,
+	.feed-form button:hover:not(:disabled) {
+		color: var(--accent-deep);
+	}
+	.feed-form {
+		margin-top: 18px;
+		max-width: 58ch;
+	}
+	.feed-name-field {
+		display: block;
+	}
+	.feed-name-field span {
+		display: block;
+		font-family: var(--sans);
+		font-size: 9.5px;
+		letter-spacing: 0.22em;
+		text-transform: uppercase;
+		color: var(--ink-3);
+		margin-bottom: 6px;
+	}
+	.feed-name-field input {
+		width: 100%;
+		border: none;
+		border-bottom: 1px solid var(--ink);
+		background: transparent;
+		font-family: var(--serif);
+		font-size: 18px;
+		padding: 6px 0 8px;
+		color: var(--ink);
+		outline: none;
+	}
+	.feed-name-field input:focus {
+		border-bottom-color: var(--accent);
+	}
+	.feed-picker {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px 14px;
+		margin: 14px 0;
+	}
+	.feed-picker label {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-family: var(--serif);
+		font-size: 14px;
+		color: var(--ink-2);
+	}
+	.feed-picker input {
+		accent-color: var(--accent);
+	}
+	.feed-form button:disabled {
+		opacity: 0.4;
+		cursor: not-allowed;
 	}
 
 	.prose {
@@ -436,6 +605,13 @@
 			grid-column: 1 / -1;
 			justify-content: flex-end;
 			padding-top: 2px;
+		}
+		.feed-list li {
+			grid-template-columns: 1fr auto;
+		}
+		.feed-subs {
+			grid-column: 1 / -1;
+			grid-row: 2;
 		}
 	}
 </style>

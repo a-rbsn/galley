@@ -9,7 +9,7 @@ import {
 } from '$lib/server/reddit';
 import { renderMarkdown } from '$lib/server/markdown';
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, request }) => {
 	const { subreddit, id } = params;
 	if (!/^[a-z0-9_]{2,21}$/i.test(subreddit)) error(400, `Invalid subreddit: ${subreddit}`);
 	if (!/^[a-z0-9]{1,12}$/i.test(id)) error(400, `Invalid post id: ${id}`);
@@ -19,7 +19,8 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	try {
 		const postListing = await redditJson<Listing<RawPost>>(`/by_id/t3_${postId}`, {
-			ttl: 300
+			ttl: 300,
+			signal: request.signal
 		});
 		const postRaw = postListing?.data?.children?.[0];
 		if (!postRaw || postRaw.kind !== 't3') error(404, `Post ${id} not found in r/${sub}.`);

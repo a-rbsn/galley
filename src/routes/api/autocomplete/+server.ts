@@ -1,7 +1,8 @@
 import { json, type RequestHandler } from '@sveltejs/kit';
 import { redditJson, RedditError, type Listing, type RawSubreddit } from '$lib/server/reddit';
+import { abortedResponse, isAbortError } from '$lib/server/abort';
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, request }) => {
 	const q = url.searchParams.get('q')?.trim() ?? '';
 	if (q.length < 1 || !/^[a-z0-9_]{1,21}$/i.test(q)) {
 		return json({ results: [] });
@@ -13,7 +14,7 @@ export const GET: RequestHandler = async ({ url }) => {
 		// with the same listing shape and is suitable for typeahead.
 		const data = await redditJson<Listing<RawSubreddit>>(
 			`/subreddits/search?q=${encodeURIComponent(q)}&include_over_18=off&limit=10`,
-			{ ttl: 600 }
+			{ ttl: 600, signal: request.signal }
 		);
 
 		const results = data.data.children
@@ -30,6 +31,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		return json({ results });
 	} catch (err) {
+		if (isAbortError(err)) return abortedResponse();
 		if (err instanceof RedditError) {
 			return json({ results: [], error: err.message }, { status: err.status });
 		}

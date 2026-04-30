@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { beforeNavigate } from '$app/navigation';
+	import { onDestroy } from 'svelte';
 	import type { CommentView, MoreCommentsView } from '$lib/types';
 
 	let {
@@ -15,6 +17,20 @@
 
 	let loading = $state(false);
 	let error = $state<string | null>(null);
+	let loadController: AbortController | null = null;
+
+	function abortLoad() {
+		loadController?.abort();
+		loadController = null;
+	}
+
+	beforeNavigate(() => {
+		abortLoad();
+	});
+
+	onDestroy(() => {
+		abortLoad();
+	});
 
 	const nested = $derived(more.depth > 0);
 
@@ -22,6 +38,8 @@
 		if (loading) return;
 		loading = true;
 		error = null;
+		const ctrl = new AbortController();
+		loadController = ctrl;
 		try {
 			const params = new URLSearchParams({
 				sub,
@@ -34,7 +52,9 @@
 			if (more.parentId.startsWith('t3_') && more.children.length > 0) {
 				params.set('children', more.children.join(','));
 			}
-			const res = await fetch(`/api/expand?${params}`);
+			const res = await fetch(`/api/expand?${params}`, {
+				signal: ctrl.signal
+			});
 			if (!res.ok) throw new Error(`HTTP ${res.status}`);
 			const data = (await res.json()) as {
 				replies?: Array<CommentView | MoreCommentsView>;
@@ -43,7 +63,10 @@
 			if (data.error) throw new Error(data.error);
 			onLoad(data.replies ?? []);
 		} catch (e) {
+			if (e instanceof Error && e.name === 'AbortError') return;
 			error = e instanceof Error ? e.message : 'failed to load';
+		} finally {
+			if (loadController === ctrl) loadController = null;
 			loading = false;
 		}
 	}

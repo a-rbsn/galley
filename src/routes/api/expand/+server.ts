@@ -10,6 +10,7 @@ import {
 	type RawMore,
 	type RawPost
 } from '$lib/server/reddit';
+import { abortedResponse, isAbortError } from '$lib/server/abort';
 import { renderMarkdown } from '$lib/server/markdown';
 import type { CommentView, MoreCommentsView } from '$lib/types';
 
@@ -60,7 +61,7 @@ function buildTreeFromFlat(
 	return top;
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, request }) => {
 	const sub = (url.searchParams.get('sub') ?? '').toLowerCase();
 	const postId = (url.searchParams.get('post') ?? '').toLowerCase();
 	const parent = url.searchParams.get('parent') ?? '';
@@ -88,7 +89,10 @@ export const GET: RequestHandler = async ({ url }) => {
 			if (children.length === 0) {
 				return json({ replies: [] });
 			}
-			const things = await redditMoreChildren(`t3_${postId}`, children, { ttl: 60 });
+			const things = await redditMoreChildren(`t3_${postId}`, children, {
+				ttl: 60,
+				signal: request.signal
+			});
 			replies = buildTreeFromFlat(things);
 			for (const r of replies) {
 				if (r.kind === 't1') annotateMarkdown(r);
@@ -99,7 +103,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			type Resp = [Listing<RawPost>, Listing<RawComment | RawMore>];
 			const result = await redditJson<Resp>(
 				`/r/${sub}/comments/${postId}/_/${parentRawId}`,
-				{ ttl: 60 }
+				{ ttl: 60, signal: request.signal }
 			);
 			const things = result[1]?.data?.children ?? [];
 			const top = things[0];
@@ -123,6 +127,7 @@ export const GET: RequestHandler = async ({ url }) => {
 
 		return json({ replies });
 	} catch (e) {
+		if (isAbortError(e)) return abortedResponse();
 		if (e instanceof RedditError) {
 			return json({ error: e.message }, { status: e.status });
 		}

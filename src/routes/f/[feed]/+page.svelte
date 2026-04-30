@@ -2,9 +2,8 @@
 	import { page } from '$app/state';
 	import { beforeNavigate } from '$app/navigation';
 	import { onDestroy } from 'svelte';
-	import PostListItem from '$lib/components/PostListItem.svelte';
 	import FeedHeader from '$lib/components/FeedHeader.svelte';
-	import { addSub, subsState } from '$lib/stores/subs.svelte';
+	import PostListItem from '$lib/components/PostListItem.svelte';
 	import { isSeen, seenState } from '$lib/stores/seen.svelte';
 	import type { Sort, TopRange } from '$lib/feed';
 	import type { PostView } from '$lib/types';
@@ -30,7 +29,7 @@
 	let extraPosts = $state<PostView[]>([]);
 	let extraErrors = $state<{ sub: string; message: string }[]>([]);
 	// svelte-ignore state_referenced_locally
-	let after = $state<string | null>(data.after);
+	let afters = $state<Record<string, string | null>>({ ...data.afters });
 	// svelte-ignore state_referenced_locally
 	let lastData = data;
 	let loading = $state(false);
@@ -54,7 +53,7 @@
 			lastData = data;
 			extraPosts = [];
 			extraErrors = [];
-			after = data.after;
+			afters = { ...data.afters };
 		}
 	});
 
@@ -62,9 +61,11 @@
 	const visiblePosts = $derived(
 		seenState.hydrated && seenState.hideSeen ? allPosts.filter((p) => !isSeen(p.id)) : allPosts
 	);
+	const allErrors = $derived([...data.errors, ...extraErrors]);
+	const canLoadMore = $derived(Object.values(afters).some((a) => a !== null));
 
 	async function loadMore() {
-		if (loading || after === null) return;
+		if (loading || !canLoadMore) return;
 		loading = true;
 		const ctrl = new AbortController();
 		loadMoreController = ctrl;
@@ -72,17 +73,13 @@
 			const res = await fetch('/api/feed', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					sort: data.sort,
-					topRange: data.topRange,
-					afters: { [data.sub]: after }
-				}),
+				body: JSON.stringify({ sort: data.sort, topRange: data.topRange, afters }),
 				signal: ctrl.signal
 			});
 			if (!res.ok) {
 				extraErrors = [
 					...extraErrors,
-					{ sub: data.sub, message: `Load more failed (${res.status}).` }
+					{ sub: '·', message: `Load more failed (${res.status}).` }
 				];
 				return;
 			}
@@ -94,93 +91,67 @@
 			const seen = new Set(allPosts.map((p) => p.id));
 			const fresh = body.posts.filter((p) => !seen.has(p.id));
 			extraPosts = [...extraPosts, ...fresh];
-			after = body.afters[data.sub] ?? null;
+			afters = { ...afters, ...body.afters };
 			if (body.errors.length > 0) {
 				extraErrors = [...extraErrors, ...body.errors];
 			}
 		} catch (e) {
 			if (e instanceof Error && e.name === 'AbortError') return;
 			const msg = e instanceof Error ? e.message : 'network error';
-			extraErrors = [...extraErrors, { sub: data.sub, message: msg }];
+			extraErrors = [...extraErrors, { sub: '·', message: msg }];
 		} finally {
 			if (loadMoreController === ctrl) loadMoreController = null;
 			loading = false;
 		}
 	}
-
-	const inFeed = $derived(subsState.list.includes(data.sub));
-	// Suppress the button until the client store has hydrated, otherwise SSR
-	// would render "add" for users who already have the sub saved.
-	const showAdd = $derived(subsState.hydrated && !inFeed);
 </script>
 
 <svelte:head>
-	<title>Galley — r/{data.sub}</title>
+	<title>Galley — {data.feed.name}</title>
 </svelte:head>
 
 <section class="feed">
 	<FeedHeader
-		title="r/{data.sub}"
+		title={data.feed.name}
+		count={visiblePosts.length}
 		sort={data.sort}
 		topRange={data.topRange}
 		{sortHref}
 		{topRangeHref}
-	>
-		{#snippet titleAction()}
-			{#if showAdd}
-				<button
-					type="button"
-					class="add-button"
-					title="Add r/{data.sub} to feed"
-					aria-label="Add r/{data.sub} to feed"
-					onclick={() => void addSub(data.sub)}
-				>
-					<svg
-						viewBox="0 0 24 24"
-						width="12"
-						height="12"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="1.75"
-						stroke-linecap="round"
-						aria-hidden="true"
-					>
-						<line x1="12" y1="5" x2="12" y2="19" />
-						<line x1="5" y1="12" x2="19" y2="12" />
-					</svg>
-				</button>
-			{/if}
-		{/snippet}
-	</FeedHeader>
+	/>
 
-	{#if extraErrors.length > 0}
+	<p class="feed-note">
+		{data.feed.subreddits.map((sub) => `r/${sub}`).join(', ')}
+	</p>
+
+	{#if allErrors.length > 0}
 		<div class="errors">
-			{#each extraErrors as err, i (i + ':' + err.sub)}
+			{#each allErrors as err, i (i + ':' + err.sub)}
 				<p><em>r/{err.sub} couldn't be loaded — {err.message}</em></p>
 			{/each}
 		</div>
 	{/if}
 
-	{#if visiblePosts.length === 0}
+	{#each visiblePosts as post (post.id)}
+		<PostListItem {post} seen={isSeen(post.id)} />
+	{/each}
+
+	{#if visiblePosts.length === 0 && allErrors.length === 0}
 		<p class="empty">
 			<em>
 				{allPosts.length > 0
 					? 'All loaded posts are marked read.'
-					: `No posts came back from Reddit for r/${data.sub} (${data.sort}).`}
+					: 'No posts came back from Reddit for this custom feed and sort.'}
 			</em>
 		</p>
-	{:else}
-		{#each visiblePosts as post (post.id)}
-			<PostListItem {post} seen={isSeen(post.id)} />
-		{/each}
+	{/if}
 
-		{#if after !== null}
-			<p class="more">
-				<button type="button" onclick={loadMore} disabled={loading}>
-					{loading ? 'Loading…' : 'Load more ↓'}
-				</button>
-			</p>
-		{/if}
+	{#if canLoadMore}
+		<p class="more">
+			<button type="button" onclick={loadMore} disabled={loading}>
+				{loading ? 'Loading...' : 'Load more'}
+			</button>
+		</p>
 	{/if}
 </section>
 
@@ -188,33 +159,13 @@
 	.feed {
 		border-top: 3px double var(--ink);
 	}
-	.add-button {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		margin-left: 10px;
-		width: 22px;
-		height: 22px;
-		padding: 0;
-		background: var(--paper);
-		border: 1px solid var(--rule);
-		border-radius: 50%;
-		color: var(--ink-3);
-		cursor: pointer;
-		vertical-align: middle;
-	}
-	.add-button svg {
-		display: block;
-	}
-	.add-button:hover {
-		border-color: var(--accent);
-		color: var(--accent);
-	}
-	.empty {
+	.feed-note {
+		margin: 8px 0 12px;
 		font-family: var(--serif);
+		font-size: 13px;
 		font-style: italic;
 		color: var(--ink-3);
-		padding: 22px 0;
+		overflow-wrap: anywhere;
 	}
 	.errors {
 		font-family: var(--serif);
@@ -226,6 +177,12 @@
 	}
 	.errors p {
 		margin: 2px 0;
+	}
+	.empty {
+		font-family: var(--serif);
+		color: var(--ink-3);
+		font-style: italic;
+		padding: 22px 0;
 	}
 	.more {
 		text-align: center;
@@ -260,6 +217,7 @@
 			border-top: none;
 			padding-top: 0;
 		}
+		.feed-note,
 		.feed > .empty,
 		.feed > .errors,
 		.feed > .more {

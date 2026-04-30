@@ -9,6 +9,7 @@ import {
 	type RawMore,
 	type RawPost
 } from '$lib/server/reddit';
+import { abortedResponse, isAbortError } from '$lib/server/abort';
 import { renderMarkdown } from '$lib/server/markdown';
 import type { CommentView, MoreCommentsView } from '$lib/types';
 
@@ -25,7 +26,7 @@ function annotateMarkdown(c: CommentView) {
  * soon as the post itself is rendered — otherwise back-navigation has to wait
  * for the streaming JSON chunk to finish.
  */
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, request }) => {
 	const { subreddit, id } = params;
 	if (!subreddit || !/^[a-z0-9_]{2,21}$/i.test(subreddit)) error(400, 'invalid subreddit');
 	if (!id || !/^[a-z0-9]{1,12}$/i.test(id)) error(400, 'invalid post id');
@@ -36,7 +37,10 @@ export const GET: RequestHandler = async ({ params }) => {
 	type Resp = [Listing<RawPost>, Listing<RawComment | RawMore>];
 
 	try {
-		const result = await redditJson<Resp>(`/r/${sub}/comments/${postId}`, { ttl: 120 });
+		const result = await redditJson<Resp>(`/r/${sub}/comments/${postId}`, {
+			ttl: 120,
+			signal: request.signal
+		});
 		const all: Array<CommentView | MoreCommentsView> = (
 			result[1]?.data?.children ?? []
 		).map((c) => {
@@ -48,6 +52,7 @@ export const GET: RequestHandler = async ({ params }) => {
 		}
 		return json({ ok: true, comments: all });
 	} catch (e) {
+		if (isAbortError(e)) return abortedResponse();
 		if (e instanceof RedditError) {
 			return json(
 				{ ok: false, error: `Reddit responded ${e.status}: ${e.message}` },

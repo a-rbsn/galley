@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
+	import { beforeNavigate } from '$app/navigation';
 	import Thread from '$lib/components/Thread.svelte';
 	import CommentsList from '$lib/components/CommentsList.svelte';
+	import { markSeen } from '$lib/stores/seen.svelte';
 	import type { CommentView, MoreCommentsView } from '$lib/types';
 	import type { PageData } from './$types';
 
@@ -13,21 +15,46 @@
 		| { status: 'error'; message: string };
 
 	let result = $state<Result>({ status: 'loading' });
+	let commentsController: AbortController | null = null;
+
+	function abortComments() {
+		commentsController?.abort();
+		commentsController = null;
+	}
+
+	beforeNavigate(() => {
+		abortComments();
+	});
+
+	onMount(() => {
+		const onPageHide = () => abortComments();
+		window.addEventListener('pagehide', onPageHide);
+		return () => {
+			window.removeEventListener('pagehide', onPageHide);
+			abortComments();
+		};
+	});
 
 	// Fetch comments on the client after the page itself has loaded. Keeping
 	// this off the server response means the navigation stream closes once the
 	// post is rendered, so back-navigation is not held open by an in-flight
 	// streamed Promise.
-	onMount(() => {
+	$effect(() => {
+		const { sub, id } = data;
+		untrack(() => markSeen(id));
+		result = { status: 'loading' };
+		abortComments();
 		const ctrl = new AbortController();
+		commentsController = ctrl;
 		(async () => {
 			try {
-				const res = await fetch(`/api/comments/${data.sub}/${data.id}`, {
+				const res = await fetch(`/api/comments/${sub}/${id}`, {
 					signal: ctrl.signal
 				});
 				const body = (await res.json()) as
 					| { ok: true; comments: Array<CommentView | MoreCommentsView> }
 					| { ok: false; error: string };
+				if (ctrl.signal.aborted) return;
 				if (body.ok) {
 					result = { status: 'ok', comments: body.comments };
 				} else {
@@ -39,7 +66,10 @@
 				result = { status: 'error', message };
 			}
 		})();
-		return () => ctrl.abort();
+		return () => {
+			if (commentsController === ctrl) commentsController = null;
+			ctrl.abort();
+		};
 	});
 </script>
 

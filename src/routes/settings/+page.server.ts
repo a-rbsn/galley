@@ -2,6 +2,9 @@ import type { Actions, PageServerLoad } from './$types';
 import { fail } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import {
+	createCustomFeed,
+	deleteCustomFeed,
+	getCustomFeeds,
 	getRedditUsername,
 	normaliseUsername,
 	setRedditUsername
@@ -10,6 +13,7 @@ import {
 export const load: PageServerLoad = async () => {
 	return {
 		redditUsername: getRedditUsername() ?? '',
+		customFeeds: getCustomFeeds(),
 		// When REDDIT_USER_AGENT is set as an env var (Docker/CI installs),
 		// the username field is informational only — the env var wins.
 		envOverride: !!env.REDDIT_USER_AGENT
@@ -36,5 +40,34 @@ export const actions: Actions = {
 			});
 		}
 		return { saved: true, value: username };
+	},
+	createFeed: async ({ request }) => {
+		const data = await request.formData();
+		const name = (data.get('name') ?? '').toString();
+		const subreddits = data
+			.getAll('subs')
+			.map((value) => value.toString())
+			.filter(Boolean);
+		try {
+			const feed = createCustomFeed(name, subreddits);
+			return { feedSaved: true, feedId: feed.id };
+		} catch (e) {
+			return fail(400, {
+				feedName: name,
+				feedError: e instanceof Error ? e.message : 'Could not create feed.'
+			});
+		}
+	},
+	deleteFeed: async ({ request }) => {
+		const data = await request.formData();
+		const id = (data.get('id') ?? '').toString();
+		try {
+			deleteCustomFeed(id);
+			return { feedDeleted: true };
+		} catch (e) {
+			return fail(500, {
+				feedError: e instanceof Error ? e.message : 'Could not delete feed.'
+			});
+		}
 	}
 };

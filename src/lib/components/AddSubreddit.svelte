@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onDestroy } from 'svelte';
 	import { addSub, subsState } from '$lib/stores/subs.svelte';
 	import { formatScore } from '$lib/util/format';
 
@@ -33,6 +34,11 @@
 		}, 220);
 	});
 
+	onDestroy(() => {
+		if (debounceTimer) clearTimeout(debounceTimer);
+		abortCtrl?.abort();
+	});
+
 	async function doSearch(q: string) {
 		if (abortCtrl) abortCtrl.abort();
 		abortCtrl = new AbortController();
@@ -63,7 +69,7 @@
 			error = null;
 			onAdded?.(name);
 		} else {
-			error = `Couldn't add r/${name}. Already added or invalid name.`;
+			error = subsState.error ?? `Couldn't add r/${name}. Already added or invalid name.`;
 		}
 	}
 

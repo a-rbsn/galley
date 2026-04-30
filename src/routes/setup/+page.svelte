@@ -73,6 +73,9 @@
 					{displayed.length} subreddit{displayed.length === 1 ? '' : 's'}
 				</span>
 			</h2>
+			{#if subsState.error}
+				<p class="picked-error">{subsState.error}</p>
+			{/if}
 			{#if displayed.length === 0}
 				<p class="picked-empty">
 					<em>Nothing yet. Pick from the suggestions above, or search for one you already follow on Reddit.</em>
@@ -217,6 +220,13 @@
 		color: var(--ink-3);
 		font-size: 14px;
 		margin: 6px 0 0;
+	}
+	.picked-error {
+		font-family: var(--serif);
+		color: var(--accent-deep);
+		font-size: 14px;
+		font-style: italic;
+		margin: 6px 0 10px;
 	}
 	.picked ul {
 		list-style: none;

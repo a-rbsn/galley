@@ -1,5 +1,9 @@
+<script lang="ts">
+	import SeenControls from './SeenControls.svelte';
+</script>
+
 <footer class="colophon">
-	<div><em>Galley</em></div>
+	<div class="footer-controls"><SeenControls placement="footer" /></div>
 	<div>
 		© {new Date().getFullYear()} · <a href="/settings">Settings</a>
 	</div>
@@ -18,13 +22,10 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: baseline;
+		gap: 18px;
 	}
-	.colophon em {
-		font-family: var(--serif);
-		font-style: italic;
-		font-size: 12px;
-		color: var(--ink-2);
-		letter-spacing: 0;
+	.footer-controls {
+		min-width: 0;
 	}
 	.colophon a {
 		color: inherit;
@@ -37,6 +38,7 @@
 	@media (max-width: 760px) {
 		.colophon {
 			padding: 20px var(--page-pad-x-mobile) 28px;
+			align-items: flex-start;
 		}
 	}
 </style>

@@ -141,13 +141,15 @@ docker run -d \
 All optional. The setup screen handles everything for a normal
 install.
 
-| Variable                | Default                | Purpose                                                                                           |
-| ----------------------- | ---------------------- | ------------------------------------------------------------------------------------------------- |
-| `REDDIT_USER_AGENT`     | _(unset)_              | Pin the User-Agent string instead of letting the setup screen build one. Skips the setup screen.  |
-| `GALLEY_CONFIG_PATH`    | `/data/config.json`    | Where to store the configured Reddit username. Set to `none` to disable persistence.              |
-| `GALLEY_CACHE_PATH`     | `/data/cache.json`     | Where to store the on-disk Reddit response cache. Set to `none` to disable persistence.           |
-| `GALLEY_CACHE_DISABLE`  | _(unset)_              | Set to `1` to disable cache persistence entirely.                                                 |
-| `HOST` / `PORT`         | `0.0.0.0` / `3000`     | Standard adapter-node knobs.                                                                      |
+| Variable                  | Default                | Purpose                                                                                                     |
+| ------------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `REDDIT_USER_AGENT`       | _(unset)_              | Pin the User-Agent string instead of letting the setup screen build one. Skips the setup screen.            |
+| `GALLEY_ADMIN_PASSWORD`   | _(unset)_              | Optional password for setup, settings, and subreddit-list changes. Uses browser HTTP Basic Auth when set.   |
+| `GALLEY_ALLOW_INDEXING`   | _(unset)_              | Set to `1` to allow search indexing. By default Galley sends `X-Robots-Tag: noindex, nofollow`.             |
+| `GALLEY_CONFIG_PATH`      | `/data/config.json`    | Where to store the configured Reddit username and subreddit list. Set to `none` to disable persistence.     |
+| `GALLEY_CACHE_PATH`       | `/data/cache.json`     | Where to store the on-disk Reddit response cache. Set to `none` to disable persistence.                     |
+| `GALLEY_CACHE_DISABLE`    | _(unset)_              | Set to `1` to disable cache persistence entirely.                                                           |
+| `HOST` / `PORT`           | `0.0.0.0` / `3000`     | Standard adapter-node knobs.                                                                                |
 
 ## Local development
 
