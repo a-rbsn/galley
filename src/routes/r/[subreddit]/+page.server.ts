@@ -9,6 +9,8 @@ import {
 } from '$lib/server/reddit';
 import { DEFAULT_TOP_RANGE, isSort, isTopRange, type Sort, type TopRange } from '$lib/feed';
 
+const SUBREDDIT_LISTING_TTL_SECONDS = 5 * 60;
+
 export const load: PageServerLoad = async ({ params, url, request }) => {
 	const sub = params.subreddit;
 	if (!/^[a-z0-9_]{2,21}$/i.test(sub)) {
@@ -27,7 +29,7 @@ export const load: PageServerLoad = async ({ params, url, request }) => {
 
 	try {
 		const data = await redditJson<Listing<RawPost>>(path, {
-			ttl: 60,
+			ttl: SUBREDDIT_LISTING_TTL_SECONDS,
 			signal: request.signal
 		});
 		const posts = data.data.children

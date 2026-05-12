@@ -34,10 +34,11 @@ returns the same listing data the website renders from. There is no
 OAuth flow, no client ID, no API approval process, no per-user account.
 
 Galley fetches those endpoints server-side from its SvelteKit
-`+page.server.ts` load functions, applies a short in-memory cache so
-that repeated views of the same page do not produce repeated upstream
-requests, and renders the result through Galley's own components and
-styles. Nothing is mirrored to a database. Nothing is republished.
+`+page.server.ts` load functions, applies a stale-while-revalidate cache
+backed by memory and local SQLite so repeated views of the same page do
+not produce repeated upstream requests, and renders the result through
+Galley's own components and styles. Nothing is mirrored to an external
+database. Nothing is republished.
 
 This is a deliberate constraint, not a stopgap. The goal is a small,
 legible, read-only client. What the public endpoints expose is enough
@@ -147,8 +148,11 @@ install.
 | `GALLEY_ADMIN_PASSWORD`   | _(unset)_              | Optional password for setup, settings, and subreddit-list changes. Uses browser HTTP Basic Auth when set.   |
 | `GALLEY_ALLOW_INDEXING`   | _(unset)_              | Set to `1` to allow search indexing. By default Galley sends `X-Robots-Tag: noindex, nofollow`.             |
 | `GALLEY_CONFIG_PATH`      | `/data/config.json`    | Where to store the configured Reddit username and subreddit list. Set to `none` to disable persistence.     |
-| `GALLEY_CACHE_PATH`       | `/data/cache.json`     | Where to store the on-disk Reddit response cache. Set to `none` to disable persistence.                     |
+| `GALLEY_CACHE_PATH`       | `/data/cache.sqlite`   | Where to store the on-disk SQLite Reddit response cache. Set to `none` to disable persistence.              |
 | `GALLEY_CACHE_DISABLE`    | _(unset)_              | Set to `1` to disable cache persistence entirely.                                                           |
+| `GALLEY_CACHE_MAX_BYTES`  | `104857600`            | Maximum compressed SQLite cache size in bytes before oldest entries are pruned.                             |
+| `GALLEY_CACHE_MEMORY_MAX_BYTES` | `33554432`       | Approximate compressed-size cap for the in-memory cache tier.                                               |
+| `GALLEY_CACHE_ENTRY_MAX_BYTES`  | `8388608`        | Maximum compressed response size persisted to SQLite; larger responses may still be cached in memory.       |
 | `HOST` / `PORT`           | `0.0.0.0` / `3000`     | Standard adapter-node knobs.                                                                                |
 
 ## Local development

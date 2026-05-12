@@ -1,7 +1,7 @@
 #!/bin/sh
 # Docker creates named volumes owned by root, but Galley runs as the
 # unprivileged `node` user. Without this chown, every writeFileSync to
-# /data/config.json or /data/cache.json fails with EACCES — silently,
+# /data/config.json or SQLite write to /data/cache.sqlite fails with EACCES — silently,
 # because the API endpoints catch and return 500s the client treats as
 # transient. The result is an instance that "completes" setup against
 # an in-memory cache and forgets everything on the next container start.

@@ -10,11 +10,12 @@
 	let { data }: { data: PageData } = $props();
 
 	type Result =
+		| { status: 'idle' }
 		| { status: 'loading' }
 		| { status: 'ok'; comments: Array<CommentView | MoreCommentsView> }
 		| { status: 'error'; message: string };
 
-	let result = $state<Result>({ status: 'loading' });
+	let result = $state<Result>({ status: 'idle' });
 	let commentsController: AbortController | null = null;
 
 	function abortComments() {
@@ -35,42 +36,42 @@
 		};
 	});
 
-	// Fetch comments on the client after the page itself has loaded. Keeping
-	// this off the server response means the navigation stream closes once the
-	// post is rendered, so back-navigation is not held open by an in-flight
-	// streamed Promise.
 	$effect(() => {
+		const id = data.id;
+		untrack(() => {
+			markSeen(id);
+			abortComments();
+			result = { status: 'idle' };
+		});
+	});
+
+	async function loadComments() {
 		const { sub, id } = data;
-		untrack(() => markSeen(id));
 		result = { status: 'loading' };
 		abortComments();
 		const ctrl = new AbortController();
 		commentsController = ctrl;
-		(async () => {
-			try {
-				const res = await fetch(`/api/comments/${sub}/${id}`, {
-					signal: ctrl.signal
-				});
-				const body = (await res.json()) as
-					| { ok: true; comments: Array<CommentView | MoreCommentsView> }
-					| { ok: false; error: string };
-				if (ctrl.signal.aborted) return;
-				if (body.ok) {
-					result = { status: 'ok', comments: body.comments };
-				} else {
-					result = { status: 'error', message: body.error };
-				}
-			} catch (e) {
-				if (e instanceof Error && e.name === 'AbortError') return;
-				const message = e instanceof Error ? e.message : 'Failed to load comments';
-				result = { status: 'error', message };
+		try {
+			const res = await fetch(`/api/comments/${sub}/${id}`, {
+				signal: ctrl.signal
+			});
+			const body = (await res.json()) as
+				| { ok: true; comments: Array<CommentView | MoreCommentsView> }
+				| { ok: false; error: string };
+			if (ctrl.signal.aborted) return;
+			if (body.ok) {
+				result = { status: 'ok', comments: body.comments };
+			} else {
+				result = { status: 'error', message: body.error };
 			}
-		})();
-		return () => {
+		} catch (e) {
+			if (e instanceof Error && e.name === 'AbortError') return;
+			const message = e instanceof Error ? e.message : 'Failed to load comments';
+			result = { status: 'error', message };
+		} finally {
 			if (commentsController === ctrl) commentsController = null;
-			ctrl.abort();
-		};
-	});
+		}
+	}
 </script>
 
 <svelte:head>
@@ -86,12 +87,19 @@
 			: 's'}
 	</h2>
 
-	{#if result.status === 'loading'}
+	{#if result.status === 'idle'}
+		<button type="button" class="load-comments" onclick={loadComments}>
+			Load comments
+		</button>
+	{:else if result.status === 'loading'}
 		<p class="loading"><em>Loading comments…</em></p>
 	{:else if result.status === 'ok'}
 		<CommentsList initial={result.comments} sub={data.sub} postId={data.id} />
 	{:else}
 		<p class="error"><em>{result.message}</em></p>
+		<button type="button" class="load-comments retry" onclick={loadComments}>
+			Retry comments
+		</button>
 	{/if}
 </section>
 
@@ -117,6 +125,26 @@
 	}
 	.error {
 		color: var(--accent-deep);
+	}
+	.load-comments {
+		margin: 14px 0 4px;
+		background: none;
+		border: none;
+		border-bottom: 1px solid var(--ink-3);
+		padding: 0 0 2px;
+		font-family: var(--sans);
+		font-size: 11px;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+		color: var(--ink-2);
+		cursor: pointer;
+	}
+	.load-comments:hover {
+		color: var(--accent);
+		border-bottom-color: var(--accent);
+	}
+	.load-comments.retry {
+		margin-top: 0;
 	}
 	@media (max-width: 760px) {
 		.comments {

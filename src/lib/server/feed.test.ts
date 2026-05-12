@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergePostSources, type PostSource } from './feed';
+import { mergePostSources, parseFeedSourceCursors, type PostSource } from './feed';
 import type { PostView } from '$lib/types';
 
 function post(id: string, sub: string, createdUtc: number, score = 1): PostView {
@@ -47,5 +47,23 @@ describe('mergePostSources', () => {
 			{ sub: 'b', posts: [post('same', 'b', 3), post('b2', 'b', 1)] }
 		];
 		expect(mergePostSources(sources, 'top').map((p) => p.id)).toEqual(['same', 'a2', 'b2']);
+	});
+});
+
+describe('parseFeedSourceCursors', () => {
+	it('accepts single-subreddit and multi-subreddit cursor keys', () => {
+		expect(
+			parseFeedSourceCursors({
+				typography: 't3_a',
+				'm:design+webdev': 't3_b',
+				'm:onlyone': 't3_c',
+				'bad/key': 't3_d',
+				javascript: null
+			})
+		).toEqual([
+			{ key: 'typography', after: 't3_a' },
+			{ key: 'm:design+webdev', after: 't3_b' },
+			{ key: 'javascript', after: null }
+		]);
 	});
 });

@@ -9,20 +9,12 @@
  * The cache is stale-while-revalidate: within `ttl` we serve cached
  * values directly; past `ttl` but inside `swr` we serve the stale value
  * immediately and kick off a background refresh; past `ttl + swr` we
- * fetch fresh and block. Survives restarts via a JSON file on disk.
+ * fetch fresh and block. Survives restarts via a SQLite cache on disk.
  */
 
 import { env } from '$env/dynamic/private';
-import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	renameSync,
-	unlinkSync,
-	writeFileSync
-} from 'node:fs';
-import { dirname, resolve } from 'node:path';
 import { abortable, throwIfAborted } from './abort';
+import { redditResponseCache } from './cache';
 import { getRedditUsername } from './config';
 import type { CommentView, MoreCommentsView, PostKind, PostView } from '$lib/types';
 
@@ -42,91 +34,8 @@ function buildUserAgent(): string {
 	if (username) return `web:io.galley.app:v0.1.0 (by /u/${username})`;
 	return FALLBACK_USER_AGENT;
 }
-const MAX_CACHE_ENTRIES = 500;
-const MAX_CACHE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-const PERSIST_DEBOUNCE_MS = 1000;
 
-type CacheEntry = { at: number; data: unknown };
-const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<unknown>>();
-
-const CACHE_PATH = resolveCachePath();
-
-function resolveCachePath(): string | null {
-	const override = env.GALLEY_CACHE_PATH;
-	if (override === 'none' || env.GALLEY_CACHE_DISABLE === '1') return null;
-	return override ? resolve(override) : resolve('.galley-cache.json');
-}
-
-let persistDisabled = false;
-let persistTimer: ReturnType<typeof setTimeout> | null = null;
-
-function loadCacheFromDisk() {
-	if (!CACHE_PATH || !existsSync(CACHE_PATH)) return;
-	try {
-		const raw = readFileSync(CACHE_PATH, 'utf8');
-		const parsed = JSON.parse(raw) as Array<[string, CacheEntry]>;
-		if (!Array.isArray(parsed)) return;
-		const cutoff = Date.now() - MAX_CACHE_AGE_MS;
-		const entries = parsed
-			.filter(
-				(entry): entry is [string, CacheEntry] =>
-					Array.isArray(entry) &&
-					typeof entry[0] === 'string' &&
-					!!entry[1] &&
-					typeof entry[1].at === 'number' &&
-					entry[1].at >= cutoff
-			)
-			.sort((a, b) => a[1].at - b[1].at)
-			.slice(-MAX_CACHE_ENTRIES);
-		for (const [k, v] of entries) {
-			cache.set(k, v);
-		}
-	} catch {
-		// Corrupt cache file — ignore, we'll rewrite on next persist.
-	}
-}
-
-function pruneCache() {
-	const cutoff = Date.now() - MAX_CACHE_AGE_MS;
-	for (const [key, entry] of cache) {
-		if (entry.at < cutoff) cache.delete(key);
-	}
-	while (cache.size > MAX_CACHE_ENTRIES) {
-		const oldest = cache.keys().next().value;
-		if (oldest === undefined) break;
-		cache.delete(oldest);
-	}
-}
-
-function schedulePersist() {
-	if (!CACHE_PATH || persistDisabled) return;
-	if (persistTimer) return;
-	persistTimer = setTimeout(() => {
-		persistTimer = null;
-		let tmpPath: string | null = null;
-		try {
-			pruneCache();
-			const dir = dirname(CACHE_PATH);
-			if (dir && dir !== '.' && !existsSync(dir)) mkdirSync(dir, { recursive: true });
-			tmpPath = `${CACHE_PATH}.${process.pid}.${Date.now()}.tmp`;
-			writeFileSync(tmpPath, JSON.stringify([...cache]));
-			renameSync(tmpPath, CACHE_PATH);
-		} catch {
-			if (tmpPath) {
-				try {
-					unlinkSync(tmpPath);
-				} catch {
-					// Best-effort cleanup only.
-				}
-			}
-			// Probably read-only filesystem (some serverless hosts). Stop trying.
-			persistDisabled = true;
-		}
-	}, PERSIST_DEBOUNCE_MS);
-}
-
-loadCacheFromDisk();
 
 export interface FetchOptions {
 	/**
@@ -174,14 +83,10 @@ function buildUrl(path: string): string {
 	return `https://www.reddit.com${pathPart}${qs ? '?' + qs : ''}`;
 }
 
-function setCache(key: string, data: unknown) {
-	if (cache.has(key)) cache.delete(key);
-	cache.set(key, { at: Date.now(), data });
-	pruneCache();
-	schedulePersist();
-}
-
-async function fetchFresh<T>(url: string): Promise<T> {
+async function fetchFresh<T>(
+	url: string,
+	cacheOptions: { ttlSeconds: number; swrSeconds: number }
+): Promise<T> {
 	const existing = inflight.get(url) as Promise<T> | undefined;
 	if (existing) return existing;
 
@@ -211,7 +116,7 @@ async function fetchFresh<T>(url: string): Promise<T> {
 				);
 			}
 			const data = (await res.json()) as T;
-			setCache(url, data);
+			redditResponseCache.set(url, data, cacheOptions);
 			return data;
 		} catch (e) {
 			if (e instanceof Error && e.name === 'AbortError') {
@@ -228,9 +133,9 @@ async function fetchFresh<T>(url: string): Promise<T> {
 	return promise;
 }
 
-function revalidate(url: string) {
+function revalidate(url: string, ttlSeconds: number, swrSeconds: number) {
 	if (inflight.has(url)) return;
-	void fetchFresh(url).catch(() => {
+	void fetchFresh(url, { ttlSeconds, swrSeconds }).catch(() => {
 		// Background refresh failures are silent — caller already got stale data.
 	});
 }
@@ -245,18 +150,15 @@ export async function redditJson<T = unknown>(
 	throwIfAborted(opts.signal);
 
 	if (!opts.skipCache) {
-		const cached = cache.get(url);
+		const cached = redditResponseCache.get<T>(url);
 		if (cached) {
-			const ageSec = (Date.now() - cached.at) / 1000;
-			if (ageSec < ttl) return cached.data as T;
-			if (ageSec < ttl + swr) {
-				revalidate(url);
-				return cached.data as T;
-			}
+			if (cached.status === 'fresh') return cached.data;
+			revalidate(url, ttl, swr);
+			return cached.data;
 		}
 	}
 
-	return abortable(fetchFresh<T>(url), opts.signal);
+	return abortable(fetchFresh<T>(url, { ttlSeconds: ttl, swrSeconds: swr }), opts.signal);
 }
 
 /**
@@ -644,6 +546,6 @@ export function rawMoreToView(m: RawMore): MoreCommentsView {
  * Test-only helper to clear the in-memory cache. Not used at runtime.
  */
 export function _clearCache() {
-	cache.clear();
+	redditResponseCache.clearMemory();
 	inflight.clear();
 }

@@ -24,5 +24,7 @@ vite.config.ts.timestamp-*
 
 # Galley runtime data (config + on-disk cache)
 .galley-cache.json
+.galley-cache.sqlite
+.galley-cache.sqlite-*
 .galley-config.json
 /data

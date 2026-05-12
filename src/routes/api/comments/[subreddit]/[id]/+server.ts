@@ -13,6 +13,8 @@ import { abortedResponse, isAbortError } from '$lib/server/abort';
 import { renderMarkdown } from '$lib/server/markdown';
 import type { CommentView, MoreCommentsView } from '$lib/types';
 
+const COMMENTS_TTL_SECONDS = 15 * 60;
+
 function annotateMarkdown(c: CommentView) {
 	c.bodyHtml = renderMarkdown(c.body);
 	for (const r of c.replies) {
@@ -38,7 +40,7 @@ export const GET: RequestHandler = async ({ params, request }) => {
 
 	try {
 		const result = await redditJson<Resp>(`/r/${sub}/comments/${postId}`, {
-			ttl: 120,
+			ttl: COMMENTS_TTL_SECONDS,
 			signal: request.signal
 		});
 		const all: Array<CommentView | MoreCommentsView> = (

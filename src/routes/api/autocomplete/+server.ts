@@ -2,6 +2,8 @@ import { json, type RequestHandler } from '@sveltejs/kit';
 import { redditJson, RedditError, type Listing, type RawSubreddit } from '$lib/server/reddit';
 import { abortedResponse, isAbortError } from '$lib/server/abort';
 
+const AUTOCOMPLETE_TTL_SECONDS = 60 * 60;
+
 export const GET: RequestHandler = async ({ url, request }) => {
 	const q = url.searchParams.get('q')?.trim() ?? '';
 	if (q.length < 1 || !/^[a-z0-9_]{1,21}$/i.test(q)) {
@@ -14,7 +16,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 		// with the same listing shape and is suitable for typeahead.
 		const data = await redditJson<Listing<RawSubreddit>>(
 			`/subreddits/search?q=${encodeURIComponent(q)}&include_over_18=off&limit=10`,
-			{ ttl: 600, signal: request.signal }
+			{ ttl: AUTOCOMPLETE_TTL_SECONDS, signal: request.signal }
 		);
 
 		const results = data.data.children

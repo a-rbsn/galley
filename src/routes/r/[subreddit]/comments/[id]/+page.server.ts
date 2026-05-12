@@ -9,6 +9,8 @@ import {
 } from '$lib/server/reddit';
 import { renderMarkdown } from '$lib/server/markdown';
 
+const POST_DETAIL_TTL_SECONDS = 30 * 60;
+
 export const load: PageServerLoad = async ({ params, request }) => {
 	const { subreddit, id } = params;
 	if (!/^[a-z0-9_]{2,21}$/i.test(subreddit)) error(400, `Invalid subreddit: ${subreddit}`);
@@ -19,7 +21,7 @@ export const load: PageServerLoad = async ({ params, request }) => {
 
 	try {
 		const postListing = await redditJson<Listing<RawPost>>(`/by_id/t3_${postId}`, {
-			ttl: 300,
+			ttl: POST_DETAIL_TTL_SECONDS,
 			signal: request.signal
 		});
 		const postRaw = postListing?.data?.children?.[0];

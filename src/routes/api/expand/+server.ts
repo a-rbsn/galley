@@ -14,6 +14,8 @@ import { abortedResponse, isAbortError } from '$lib/server/abort';
 import { renderMarkdown } from '$lib/server/markdown';
 import type { CommentView, MoreCommentsView } from '$lib/types';
 
+const COMMENT_EXPANSION_TTL_SECONDS = 15 * 60;
+
 function annotateMarkdown(c: CommentView) {
 	c.bodyHtml = renderMarkdown(c.body);
 	for (const r of c.replies) {
@@ -90,7 +92,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 				return json({ replies: [] });
 			}
 			const things = await redditMoreChildren(`t3_${postId}`, children, {
-				ttl: 60,
+				ttl: COMMENT_EXPANSION_TTL_SECONDS,
 				signal: request.signal
 			});
 			replies = buildTreeFromFlat(things);
@@ -103,7 +105,7 @@ export const GET: RequestHandler = async ({ url, request }) => {
 			type Resp = [Listing<RawPost>, Listing<RawComment | RawMore>];
 			const result = await redditJson<Resp>(
 				`/r/${sub}/comments/${postId}/_/${parentRawId}`,
-				{ ttl: 60, signal: request.signal }
+				{ ttl: COMMENT_EXPANSION_TTL_SECONDS, signal: request.signal }
 			);
 			const things = result[1]?.data?.children ?? [];
 			const top = things[0];

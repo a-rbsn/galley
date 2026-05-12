@@ -10,6 +10,11 @@ import type { Sort, TopRange } from '$lib/feed';
 import type { PostView } from '$lib/types';
 
 const FEED_FETCH_CONCURRENCY = 6;
+const FEED_LISTING_TTL_SECONDS = 5 * 60;
+const MULTI_SUB_BATCH_SIZE = 25;
+const REDDIT_LISTING_LIMIT = 50;
+const SUB_RE = /^[a-z0-9_]{2,21}$/;
+const VIRTUAL_SUBS = new Set(['all', 'popular']);
 
 export interface FeedError {
 	sub: string;
@@ -27,15 +32,100 @@ export interface PostSource {
 	posts: PostView[];
 }
 
+export interface FeedSourceCursor {
+	key: string;
+	after: string | null;
+}
+
+interface FeedSource {
+	key: string;
+	label: string;
+	subs: string[];
+}
+
 export interface FeedLoadOptions {
 	signal?: AbortSignal;
 }
 
-function redditListingPath(sub: string, sort: Sort, topRange: TopRange, after?: string): string {
-	const params = new URLSearchParams({ limit: '25' });
+function redditListingPath(source: FeedSource, sort: Sort, topRange: TopRange, after?: string): string {
+	const params = new URLSearchParams({ limit: String(REDDIT_LISTING_LIMIT) });
 	if (sort === 'top') params.set('t', topRange);
 	if (after) params.set('after', after);
-	return `/r/${sub}/${sort}?${params.toString()}`;
+	return `/r/${source.subs.join('+')}/${sort}?${params.toString()}`;
+}
+
+function sourceFromSubs(subs: string[]): FeedSource {
+	const normalised = subs.map((sub) => sub.toLowerCase());
+	if (normalised.length === 1) {
+		return {
+			key: normalised[0],
+			label: normalised[0],
+			subs: normalised
+		};
+	}
+	return {
+		key: `m:${normalised.join('+')}`,
+		label: normalised.join('+'),
+		subs: normalised
+	};
+}
+
+function buildFeedSources(subs: string[]): FeedSource[] {
+	const sources: FeedSource[] = [];
+	let batch: string[] = [];
+
+	function flushBatch() {
+		if (batch.length > 0) {
+			sources.push(sourceFromSubs(batch));
+			batch = [];
+		}
+	}
+
+	for (const sub of subs) {
+		const normalised = sub.toLowerCase();
+		if (!SUB_RE.test(normalised)) continue;
+		if (VIRTUAL_SUBS.has(normalised)) {
+			flushBatch();
+			sources.push(sourceFromSubs([normalised]));
+			continue;
+		}
+		batch.push(normalised);
+		if (batch.length >= MULTI_SUB_BATCH_SIZE) flushBatch();
+	}
+	flushBatch();
+
+	return sources;
+}
+
+export function parseFeedSourceCursors(
+	afters: Record<string, unknown>
+): FeedSourceCursor[] {
+	const cursors: FeedSourceCursor[] = [];
+
+	for (const [key, after] of Object.entries(afters)) {
+		if (!(after === null || typeof after === 'string')) continue;
+		let source: FeedSource | null = null;
+
+		if (key.startsWith('m:')) {
+			const subs = key
+				.slice(2)
+				.split('+')
+				.map((sub) => sub.toLowerCase())
+				.filter((sub) => SUB_RE.test(sub));
+			if (subs.length >= 2 && subs.length <= MULTI_SUB_BATCH_SIZE) {
+				source = sourceFromSubs(subs);
+			}
+		} else {
+			const sub = key.toLowerCase();
+			if (SUB_RE.test(sub)) source = sourceFromSubs([sub]);
+		}
+
+		if (source && source.key === key) {
+			cursors.push({ key: source.key, after });
+		}
+	}
+
+	return cursors;
 }
 
 function errorMessage(reason: unknown): string {
@@ -80,9 +170,10 @@ export async function loadMergedFeed(
 	limit = 50,
 	opts: FeedLoadOptions = {}
 ): Promise<FeedResult> {
-	const settled = await mapLimit(subs, FEED_FETCH_CONCURRENCY, (sub) =>
-		redditJson<Listing<RawPost>>(redditListingPath(sub, sort, topRange), {
-			ttl: 60,
+	const feedSources = buildFeedSources(subs);
+	const settled = await mapLimit(feedSources, FEED_FETCH_CONCURRENCY, (source) =>
+		redditJson<Listing<RawPost>>(redditListingPath(source, sort, topRange), {
+			ttl: FEED_LISTING_TTL_SECONDS,
 			signal: opts.signal
 		}),
 		opts.signal
@@ -93,18 +184,18 @@ export async function loadMergedFeed(
 	const sources: PostSource[] = [];
 
 	settled.forEach((res, i) => {
-		const sub = subs[i];
+		const source = feedSources[i];
 		if (res.status === 'fulfilled') {
-			afters[sub] = res.value.data.after;
+			afters[source.key] = res.value.data.after;
 			sources.push({
-				sub,
+				sub: source.label,
 				posts: res.value.data.children
 					.filter((c): c is RawPost => c.kind === 't3')
 					.map(rawPostToView)
 			});
 		} else {
-			afters[sub] = null;
-			errors.push({ sub, message: errorMessage(res.reason) });
+			afters[source.key] = null;
+			errors.push({ sub: source.label, message: errorMessage(res.reason) });
 		}
 	});
 
@@ -116,15 +207,23 @@ export async function loadMergedFeed(
 }
 
 export async function loadMergedFeedPage(
-	afterEntries: Array<[string, string | null]>,
+	cursorEntries: FeedSourceCursor[],
 	sort: Sort,
 	topRange: TopRange,
 	opts: FeedLoadOptions = {}
 ): Promise<FeedResult> {
-	const live = afterEntries.filter(([, after]) => after !== null) as Array<[string, string]>;
-	const settled = await mapLimit(live, FEED_FETCH_CONCURRENCY, ([sub, after]) =>
-		redditJson<Listing<RawPost>>(redditListingPath(sub, sort, topRange, after), {
-			ttl: 60,
+	const sourceEntries = cursorEntries.map((cursor) => ({
+		source: sourceFromSubs(
+			cursor.key.startsWith('m:') ? cursor.key.slice(2).split('+') : [cursor.key]
+		),
+		after: cursor.after
+	}));
+	const live = sourceEntries.filter(
+		(entry): entry is { source: FeedSource; after: string } => entry.after !== null
+	);
+	const settled = await mapLimit(live, FEED_FETCH_CONCURRENCY, ({ source, after }) =>
+		redditJson<Listing<RawPost>>(redditListingPath(source, sort, topRange, after), {
+			ttl: FEED_LISTING_TTL_SECONDS,
 			signal: opts.signal
 		}),
 		opts.signal
@@ -133,21 +232,21 @@ export async function loadMergedFeedPage(
 	const errors: FeedError[] = [];
 	const afters: Record<string, string | null> = {};
 	const sources: PostSource[] = [];
-	for (const [sub] of afterEntries) afters[sub] = null;
+	for (const { source } of sourceEntries) afters[source.key] = null;
 
 	settled.forEach((res, i) => {
-		const [sub, previousAfter] = live[i];
+		const { source, after: previousAfter } = live[i];
 		if (res.status === 'fulfilled') {
-			afters[sub] = res.value.data.after;
+			afters[source.key] = res.value.data.after;
 			sources.push({
-				sub,
+				sub: source.label,
 				posts: res.value.data.children
 					.filter((c): c is RawPost => c.kind === 't3')
 					.map(rawPostToView)
 			});
 		} else {
-			afters[sub] = previousAfter;
-			errors.push({ sub, message: errorMessage(res.reason) });
+			afters[source.key] = previousAfter;
+			errors.push({ sub: source.label, message: errorMessage(res.reason) });
 		}
 	});
 

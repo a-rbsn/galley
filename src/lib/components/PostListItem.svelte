@@ -27,11 +27,7 @@
 		</div>
 
 		<h2 class="title">
-			<a
-				href={post.permalink}
-				data-sveltekit-preload-data="hover"
-				onclick={() => markSeen(post.id)}
-			>{post.title}</a>
+			<a href={post.permalink} onclick={() => markSeen(post.id)}>{post.title}</a>
 		</h2>
 
 		<PostMeta {post} />
@@ -41,7 +37,6 @@
 		<a
 			class="thumb"
 			href={post.permalink}
-			data-sveltekit-preload-data="hover"
 			aria-hidden="true"
 			tabindex="-1"
 			onclick={() => markSeen(post.id)}

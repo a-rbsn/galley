@@ -4,6 +4,8 @@ build
 .git
 .github
 .galley-cache.json
+.galley-cache.sqlite
+.galley-cache.sqlite-*
 .galley-config.json
 .env
 .env.*
